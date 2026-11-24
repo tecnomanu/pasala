@@ -54,7 +54,6 @@ compose.desktop {
       linux {
         iconFile.set(project.file("../icons/pasala.png"))
         packageName = "pasala"
-        debMaintainer = "tecnomanu@users.noreply.github.com"
         menuGroup = "Network;FileTransfer;"
         shortcut = true
       }

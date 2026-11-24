@@ -167,6 +167,7 @@ Para cada candidata: `POST /v1/hello` con 2 s de timeout de conexión. La primer
 Cada nodo anuncia el servicio `_pasala._tcp` (Bonjour en Mac, NSD en Android) en su puerto,
 con TXT `id=<id>`. Sirve para encontrar a un peer conocido cuyo IP de LAN cambió.
 Nunca empareja por sí solo: solo se habla con peers que ya están en la lista.
+La app de Windows/Linux todavía no anuncia ni busca: la encuentran por las direcciones del último `hello`.
 
 ## Destino de lo recibido
 
@@ -174,6 +175,7 @@ Si el lote trae una colección válida, va a la carpeta de esa colección. Si no
 
 - **Mac**: carpeta elegida por el usuario (por defecto `~/Downloads/Pasala`), con opción de una carpeta propia por dispositivo.
 - **Android**: MediaStore — imágenes a `Pictures/Pasala`, videos a `Movies/Pasala`, el resto a `Download/Pasala`.
+- **Windows / Linux**: carpeta elegida por la persona (por defecto `Descargas/Pasala`).
 
 ## Seguridad (lo que hay y lo que no)
 
