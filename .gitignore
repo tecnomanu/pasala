@@ -1,0 +1,14 @@
+.DS_Store
+*.log
+mac/.build/
+mac/build/
+mac/.swiftpm/
+android/build/
+android/app/build/
+android/.gradle/
+android/.kotlin/
+android/local.properties
+android/tools/.fake_peer.json
+android/tools/received/
+*.keystore
+*.jks

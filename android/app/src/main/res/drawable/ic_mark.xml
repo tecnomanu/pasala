@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pasala mark: paper plane with the dotted trail of the pass (docs/brand/pasala-mark.svg).
+     Trail = stroke-dasharray "0.01 11.5" on M12 90 Q16 64 38 62, drawn as circles. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="100" android:viewportHeight="100">
+    <path android:fillColor="#3DFFB0" android:pathData="M15.20,81.75 a3.22,3.22 0 1,0 6.44,0 a3.22,3.22 0 1,0 -6.44,0 Z M17.74,72.24 a3.22,3.22 0 1,0 6.44,0 a3.22,3.22 0 1,0 -6.44,0 Z M23.06,64.00 a3.22,3.22 0 1,0 6.44,0 a3.22,3.22 0 1,0 -6.44,0 Z M31.42,58.94 a3.22,3.22 0 1,0 6.44,0 a3.22,3.22 0 1,0 -6.44,0 Z" />
+    <path android:pathData="M81.92,16.53 L45.88,52.57 L57.04,78.32 Z" android:fillColor="#E4DCFF" android:strokeColor="#E4DCFF"
+        android:strokeWidth="3.43" android:strokeLineJoin="round" />
+    <path android:pathData="M81.92,16.53 L45.88,52.57 L47.60,65.45 Z" android:fillColor="#B9A6FF" android:strokeColor="#B9A6FF"
+        android:strokeWidth="2.57" android:strokeLineJoin="round" />
+    <path android:pathData="M81.92,16.53 L20.14,43.13 L45.88,52.57 Z" android:fillColor="#FFFFFF" android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.43" android:strokeLineJoin="round" />
+</vector>
