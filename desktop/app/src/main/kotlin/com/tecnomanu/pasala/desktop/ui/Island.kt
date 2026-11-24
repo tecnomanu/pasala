@@ -110,8 +110,10 @@ fun Island() {
     val sentFailed = stringResource(Res.string.island_send_failed)
     val declinedText = stringResource(Res.string.island_declined)
     val unreachText = stringResource(Res.string.island_unreachable)
+    val tooLarge = stringResource(Res.string.text_too_large)
     val seenFinished = remember { mutableStateMapOf<String, Boolean>() }
     LaunchedEffect(jobs) {
+        seenFinished.keys.retainAll(jobs.keys)
         jobs.values.filter { it.finished && seenFinished[it.id] == null }.forEach { j ->
             seenFinished[j.id] = true
             val ok = j.phase == Sender.Phase.Done
@@ -145,8 +147,8 @@ fun Island() {
         toast != null && toast!!.until > now -> Mode.Done
         else -> Mode.Idle
     }
-    LaunchedEffect(mode, Ui.mainOpen, Ui.sendFiles) {
-        Desktop.onScreen.value = mode == Mode.Open || mode == Mode.Drop || mode == Mode.PickText || Ui.mainOpen || Ui.sendFiles != null
+    LaunchedEffect(mode, Ui.windowFocused) {
+        Desktop.onScreen.value = mode == Mode.Open || mode == Mode.Drop || mode == Mode.PickText || Ui.windowFocused
     }
     val mustShow = mode == Mode.PickText || mode == Mode.Offer || mode == Mode.Drop
     val visible = !Ui.islandHidden || mustShow
@@ -266,7 +268,13 @@ fun Island() {
                         val name = Store.peer(peerId)?.displayName.orEmpty()
                         val r = Sender.sendText(peerId, text)
                         Store.setLastTextPeer(peerId)
-                        toast = Toast(if (r == Sender.TextResult.Ok) sentDone.format(name) else unreachText.format(name), "", r == Sender.TextResult.Ok, System.currentTimeMillis() + 4000)
+                        val title = when (r) {
+                            Sender.TextResult.Ok -> sentDone.format(name)
+                            Sender.TextResult.TooLarge -> tooLarge
+                            Sender.TextResult.Unreachable -> unreachText.format(name)
+                            Sender.TextResult.Failed -> sentFailed
+                        }
+                        toast = Toast(title, "", r == Sender.TextResult.Ok, System.currentTimeMillis() + 4000)
                     }
                 }
                 Mode.TextArrived -> lastText?.first?.let { TextArrivedPanel(it) { Desktop.lastText.value = it to (System.currentTimeMillis() + 1200) } }
@@ -374,7 +382,7 @@ private fun OpenPanel(latest: List<FileRecord>, online: Map<String, Boolean>, on
                 if (latest.isEmpty()) T(stringResource(Res.string.island_latest_empty), 12.sp, color = P.dim)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     latest.forEach { f ->
-                        Box(Modifier.clickable { if (f.mime == TEXT_MIME) Desktop.textOf(f)?.let(Clipboard::copy) else Ui.open(f.file) }) {
+                        Box(Modifier.clickable { if (f.mime == TEXT_MIME) Ui.copyText(f) else Ui.open(f.file) }) {
                             FileThumb(f.path, f.mime, f.name, 46.dp, 10.dp)
                         }
                     }
@@ -497,11 +505,14 @@ private fun TextArrivedPanel(f: FileRecord, onCopied: () -> Unit) {
     var copied by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Header(stringResource(Res.string.island_text_ready), stringResource(Res.string.from_device, f.peerName))
-        T(Desktop.textOf(f) ?: f.name, 12.5.sp, color = P.text.copy(alpha = 0.9f), maxLines = 2,
+        val text by androidx.compose.runtime.produceState(f.name, f.path) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Desktop.textOf(f)?.take(400) } ?: f.name
+        }
+        T(text, 12.5.sp, color = P.text.copy(alpha = 0.9f), maxLines = 2,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(P.surface).padding(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             GlowButton(stringResource(if (copied) Res.string.copied else Res.string.copy)) {
-                Desktop.textOf(f)?.let(Clipboard::copy); copied = true; onCopied()
+                Ui.copyText(f); copied = true; onCopied()
             }
             GlowButton(stringResource(Res.string.open), prominent = false) { Ui.open(f.file) }
         }

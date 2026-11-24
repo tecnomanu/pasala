@@ -14,7 +14,7 @@ object Notify {
     fun native(title: String, body: String): Boolean {
         if (!notifySend) return false
         return runCatching {
-            ProcessBuilder(listOf("notify-send", "-a", "Pasala", "-i", icon, title) + listOfNotNull(body.takeIf { it.isNotBlank() })).start()
+            ProcessBuilder(listOf("notify-send", "-a", "Pasala", "-i", icon, "--", title) + listOfNotNull(body.takeIf { it.isNotBlank() })).start()
             true
         }.getOrDefault(false)
     }

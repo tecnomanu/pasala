@@ -75,6 +75,7 @@ object Desktop {
         Sender.host = FileSender
         Store.onHistory = { item -> if (item.mime == TEXT_MIME) indexText(item) }
         refreshRecent()
+        runCatching { DiskReceiver.cleanLeftovers() }
     }
 
     private fun defaultName(): String {
@@ -98,15 +99,12 @@ object Desktop {
         // Protocol § "Cada cuánto": every 20 s while Pasala is on screen, every 10 min otherwise.
         Live.appScope.launch {
             var last = 0L
-            var wasWatching = false
             while (true) {
-                val now = System.currentTimeMillis()
                 val watching = onScreen.value
-                if (now - last >= (if (watching) 20_000L else 600_000L) || (watching && !wasWatching)) {
-                    runCatching { Resolver.refreshAll() }
+                if (System.currentTimeMillis() - last >= (if (watching) 20_000L else 600_000L)) {
+                    runCatching { Resolver.refreshAll(lastOnly = !watching && last > 0) }
                     last = System.currentTimeMillis()
                 }
-                wasWatching = watching
                 delay(2_000)
             }
         }
@@ -172,7 +170,7 @@ object Desktop {
     fun textOf(r: FileRecord): String? = runCatching { File(r.path).readText() }.getOrNull()
 
     private fun indexText(item: HistoryItem) {
-        val name = TextStore.preview(item.text.orEmpty()).lineSequence().firstOrNull().orEmpty().take(60).ifBlank { "Texto" }
+        val name = TextStore.preview(item.text.orEmpty()).lineSequence().firstOrNull().orEmpty().take(60).ifBlank { "…" }
         index.addFile(item.id, item.direction, item.peerId, item.peerName, name, TextStore.file(item.id).path, TEXT_MIME, item.size, item.time)
         refreshRecent()
         if (item.direction == "in") {
@@ -227,7 +225,7 @@ object Desktop {
                 if (written != file.size) throw Receiver.Incomplete()
                 val final = synchronized(this) {
                     val taken = dir.list()?.map { it.lowercase() }?.toSet().orEmpty()
-                    val target = File(dir, Receiver.uniqueName(taken, file.name))
+                    val target = File(dir, Receiver.uniqueName(taken, safeName(file.name)))
                     // The name is sanitized already; still never write outside the destination folder.
                     if (target.canonicalFile.parentFile != dir.canonicalFile) throw IOException("bad name")
                     Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE)
@@ -238,6 +236,27 @@ object Desktop {
             } catch (e: Exception) {
                 tmp.delete()
                 throw e
+            }
+        }
+
+        /**
+         * On top of the shared sanitizing: no direction-override characters (a name that reads `photo.jpg` but is
+         * an `.exe`), no trailing dots or spaces, and no names Windows reserves for devices.
+         */
+        private fun safeName(name: String): String {
+            var n = name.replace(Regex("[\u200E\u200F\u202A-\u202E\u2066-\u2069]"), "").trimEnd('.', ' ')
+            if (n.substringBefore('.').uppercase() in RESERVED) n = "_$n"
+            return n.ifBlank { "archivo" }
+        }
+
+        private val RESERVED = setOf("CON", "PRN", "AUX", "NUL") + (1..9).flatMap { listOf("COM$it", "LPT$it") }
+
+        /** Leftovers from a transfer cut by closing the app. */
+        fun cleanLeftovers() {
+            val cutoff = System.currentTimeMillis() - 60 * 60 * 1000
+            (listOf(Desktop.inbox.value) + Desktop.collections.value.map { File(it.path) }).forEach { dir ->
+                dir.listFiles { f -> f.name.startsWith(".pasala-") && f.name.endsWith(".part") && f.lastModified() < cutoff }
+                    ?.forEach { it.delete() }
             }
         }
 

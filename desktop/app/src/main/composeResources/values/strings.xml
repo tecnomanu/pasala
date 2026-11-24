@@ -51,6 +51,7 @@
     <string name="island_send_failed">Some files didn’t make it. Try again.</string>
     <string name="island_declined">%1$s said no this time.</string>
     <string name="island_unreachable">Couldn’t reach %1$s. Check it’s on and on the same network.</string>
+    <string name="text_too_large">That text is too long to send (up to 1 MB).</string>
     <string name="island_arrived_from">From %1$s</string>
     <string name="drop_on_device">Drop it on a device</string>
     <plurals name="offer_title">

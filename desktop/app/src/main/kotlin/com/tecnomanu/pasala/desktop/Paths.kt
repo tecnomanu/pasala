@@ -23,7 +23,10 @@ object Paths {
             isWindows -> File(System.getenv("APPDATA") ?: File(home, "AppData/Roaming").path, "Pasala")
             else -> File(System.getenv("XDG_DATA_HOME")?.takeIf { it.isNotBlank() } ?: File(home, ".local/share").path, "pasala")
         }
-        dir.apply { mkdirs() }
+        dir.mkdirs()
+        // Peer secrets and the local token live here: only this user may read it.
+        runCatching { java.nio.file.Files.setPosixFilePermissions(dir.toPath(), java.nio.file.attribute.PosixFilePermissions.fromString("rwx------")) }
+        dir
     }
 
     val stateFile get() = File(dataDir, "pasala.json")

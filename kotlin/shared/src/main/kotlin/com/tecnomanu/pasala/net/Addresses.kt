@@ -11,6 +11,8 @@ object Addresses {
 
     private val VIRTUAL = listOf("docker", "br-", "veth", "virbr", "vmnet", "vboxnet", "lxc", "lxd", "podman", "cni", "flannel")
 
+    private val VIRTUAL_DISPLAY = listOf("Hyper-V", "VirtualBox", "VMware", "WSL")
+
     fun isTailscale(ip: String): Boolean {
         val p = ip.split('.').mapNotNull { it.toIntOrNull() }
         return p.size == 4 && p[0] == 100 && p[1] in 64..127
@@ -32,6 +34,9 @@ object Addresses {
                 val name = ni.name.orEmpty()
                 // Container and VM bridges (Linux desktops) are private but never reach another device.
                 if (VIRTUAL.any { name.startsWith(it) }) continue
+                // Windows names every adapter ethN; Hyper-V, WSL and VM adapters show in the display name.
+                val display = runCatching { ni.displayName }.getOrNull().orEmpty()
+                if (VIRTUAL_DISPLAY.any { display.contains(it, ignoreCase = true) }) continue
                 for (addr in ni.inetAddresses.toList()) {
                     if (addr !is Inet4Address || addr.isLoopbackAddress || addr.isLinkLocalAddress) continue
                     val ip = addr.hostAddress ?: continue

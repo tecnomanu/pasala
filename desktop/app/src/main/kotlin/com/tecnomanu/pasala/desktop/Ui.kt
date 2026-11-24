@@ -18,6 +18,8 @@ object Ui {
     /** The send job the open send window is following (it clears it when closed). */
     var sendJob by mutableStateOf<String?>(null)
     var islandHidden by mutableStateOf(false)
+    /** A Pasala window has focus (the person is looking at it). */
+    var windowFocused by mutableStateOf(false)
     /** Which window to bring to the front, and a counter so asking twice still works. */
     var focus by mutableStateOf("" to 0)
         private set
@@ -38,6 +40,11 @@ object Ui {
     fun hideIsland(hidden: Boolean) {
         islandHidden = hidden
         Desktop.index.setSetting("island_hidden", if (hidden) "1" else "0")
+    }
+
+    /** Copies a received text; the file can be up to 1 MB, so it is read off the UI thread. */
+    fun copyText(r: FileRecord) {
+        Thread { Desktop.textOf(r)?.let(Clipboard::copy) }.start()
     }
 
     /** Opens a file or folder with the system's default app. */

@@ -88,7 +88,15 @@ import javax.swing.JFileChooser
 fun PasalaWindow(id: String, title: String, size: DpSize, onClose: () -> Unit, resizable: Boolean = true, content: @Composable ColumnScope.(java.awt.Window) -> Unit) {
     val state = rememberWindowState(size = size, position = WindowPosition(Alignment.Center))
     Window(onCloseRequest = onClose, state = state, title = title, icon = painterResource(Res.drawable.pasala_icon), resizable = resizable) {
-        LaunchedEffect(window) { com.tecnomanu.pasala.desktop.DarkTitleBar.apply(window) }
+        DisposableEffect(window) {
+            com.tecnomanu.pasala.desktop.DarkTitleBar.apply(window)
+            val l = object : java.awt.event.WindowAdapter() {
+                override fun windowGainedFocus(e: java.awt.event.WindowEvent) { Ui.windowFocused = true }
+                override fun windowLostFocus(e: java.awt.event.WindowEvent) { Ui.windowFocused = false }
+            }
+            window.addWindowFocusListener(l)
+            onDispose { window.removeWindowFocusListener(l); Ui.windowFocused = false }
+        }
         val focus = Ui.focus
         LaunchedEffect(focus) { if (focus.first == id) { window.toFront(); window.requestFocus() } }
         Column(Modifier.fillMaxSize().background(P.ink)) { content(window) }
@@ -235,12 +243,12 @@ private fun DeckRow(f: FileRecord) {
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         FileThumb(f.path, f.mime, f.name, 52.dp)
         Column(Modifier.weight(1f)) {
-            T(if (f.mime == TEXT_MIME) (Desktop.textOf(f)?.replace('\n', ' ') ?: f.name) else f.name, 13.5.sp, FontWeight.SemiBold, maxLines = 1)
+            T(f.name, 13.5.sp, FontWeight.SemiBold, maxLines = 1)
             val who = stringResource(if (f.direction == "in") Res.string.from_device else Res.string.to_device, f.peerName)
             T(listOfNotNull(who, f.collection, relative(f.createdAt), formatSize(f.size).takeIf { f.mime != TEXT_MIME }).joinToString(" · "), 11.5.sp, color = P.dim, maxLines = 1)
         }
         if (f.mime == TEXT_MIME) {
-            GlowButton(stringResource(Res.string.copy)) { Desktop.textOf(f)?.let(Clipboard::copy) }
+            GlowButton(stringResource(Res.string.copy)) { Ui.copyText(f) }
         } else if (exists) {
             GlowButton(stringResource(Res.string.open), prominent = false) { Ui.open(f.file) }
             GlowButton(stringResource(Res.string.show_in_folder), prominent = false) { Ui.reveal(f.file) }
@@ -448,7 +456,8 @@ fun SettingsWindow() {
     val inbox by Desktop.inbox.collectAsState()
     val collections by Desktop.collections.collectAsState()
     var name by remember { mutableStateOf(state.identity?.name.orEmpty()) }
-    var atLogin by remember { mutableStateOf(Integrations.opensAtLogin()) }
+    var atLogin by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { atLogin = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Integrations.opensAtLogin() } }
     PasalaWindow("settings", stringResource(Res.string.settings), DpSize(560.dp, 680.dp), onClose = { Ui.settingsOpen = false; Desktop.rename(name) }) { window ->
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             T(stringResource(Res.string.settings), 26.sp, FontWeight.ExtraBold)
@@ -464,7 +473,7 @@ fun SettingsWindow() {
             }
             Toggle(stringResource(Res.string.ask_before), stringResource(Res.string.ask_before_hint), state.settings.askBeforeReceiving) { Store.setAskBeforeReceiving(it) }
             Toggle(stringResource(Res.string.show_island), null, !Ui.islandHidden) { Ui.hideIsland(!it) }
-            if (Integrations.canOpenAtLogin()) Toggle(stringResource(Res.string.open_at_login), null, atLogin) { Integrations.setOpenAtLogin(it); atLogin = Integrations.opensAtLogin() }
+            if (Integrations.canOpenAtLogin()) Toggle(stringResource(Res.string.open_at_login), null, atLogin) { on -> atLogin = on; Thread { Integrations.setOpenAtLogin(on) }.start() }
             T(stringResource(Res.string.shortcut_hint, Hotkey.LABEL), 12.sp, color = P.dim)
             SectionLabel(stringResource(Res.string.collections))
             T(stringResource(Res.string.collections_settings_hint), 12.sp, color = P.dim)

@@ -35,14 +35,17 @@ import java.security.MessageDigest
 object LocalApi {
     private var token = ""
 
+    /** A new token on every start, written 0600 before it holds anything (D-006). */
     fun ensureToken() {
+        token = Pairing.randomB64(32)
         val f = Paths.tokenFile
-        token = f.takeIf { it.exists() }?.readText()?.trim().orEmpty()
-        if (token.isEmpty()) {
-            token = Pairing.randomB64(32)
-            f.writeText(token)
-        }
-        runCatching { Files.setPosixFilePermissions(f.toPath(), PosixFilePermissions.fromString("rw-------")) }
+        val tmp = java.io.File(f.parentFile, "local-token.tmp")
+        tmp.delete()
+        val path = tmp.toPath()
+        runCatching { Files.createFile(path, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))) }
+            .getOrElse { Files.createFile(path) }
+        tmp.writeText(token)
+        Files.move(path, f.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
     }
 
     fun handle(req: HttpRequest): HttpResponse {
@@ -139,7 +142,8 @@ object LocalApi {
         }
         val job = Desktop.sendFiles(files, peer.id, o["collection"]?.jsonPrimitive?.contentOrNull)
             ?: return HttpResponse.error(400, "bad_request")
-        val end = runBlocking { Sender.jobs.first { it[job]?.finished == true }[job]!! }
+        val end = runBlocking { Sender.jobs.first { it[job]?.finished != false }[job] }
+            ?: return HttpResponse.error(404, "unknown_device")
         Sender.forget(job)
         return if (end.phase == Sender.Phase.Done) {
             json(buildJsonObject { put("ok", true); put("device", peer.displayName); put("count", files.size) })

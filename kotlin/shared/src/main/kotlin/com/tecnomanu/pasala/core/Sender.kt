@@ -61,7 +61,7 @@ object Sender {
 
     private val _jobs = MutableStateFlow<Map<String, JobState>>(emptyMap())
     val jobs: StateFlow<Map<String, JobState>> = _jobs.asStateFlow()
-    private val running = HashMap<String, Job>()
+    private val running = java.util.concurrent.ConcurrentHashMap<String, Job>()
 
     lateinit var host: SenderHost
 
