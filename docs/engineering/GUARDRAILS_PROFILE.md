@@ -2,14 +2,14 @@
 
 | Tema | Pasala |
 |---|---|
-| Lenguajes | Swift 6 toolchain en modo Swift 5 (Mac), Kotlin 2.3 (Android), Python 3 stdlib (herramientas de prueba) |
-| Build | Swift Package Manager + `mac/build.sh` (arma y firma ad hoc el `.app`); Gradle wrapper (AGP 9, JDK 21) |
-| Superficies | App de barra de menú + isla (Mac), servidor MCP stdio (Mac), app Android con share target y servicio |
-| Persistencia | SQLite (Mac), JSON en `filesDir` (Android), MediaStore para lo recibido |
+| Lenguajes | Swift 6 toolchain en modo Swift 5 (Mac + iPhone), Kotlin 2.3 (Android), Python 3 stdlib (herramientas de prueba) |
+| Build | Swift Package Manager + `apple/build.sh` (arma y firma ad hoc el `.app`); Gradle wrapper (AGP 9, JDK 21) |
+| Superficies | App de barra de menú + isla (Mac), servidor MCP stdio (Mac), app de iPhone + extensión de Compartir, app Android con share target y servicio |
+| Persistencia | SQLite (Mac; iPhone en App Group), JSON en `filesDir` (Android), MediaStore para lo recibido |
 | Red | HTTP/1.1 propio en ambos lados, puerto 47820, Bonjour/NSD `_pasala._tcp`, LAN o Tailscale |
 | Auth | Vinculación por QR (código de un uso) → secret compartido por par; `Bearer` + `X-Pasala-From` |
 | MCP | `pasala-mcp`: lectura del índice + envío/vinculación vía ruta local loopback con token |
-| Segundo plano | Servicio en primer plano `connectedDevice` (Android); app residente (Mac) |
+| Segundo plano | Servicio en primer plano `connectedDevice` (Android); app residente (Mac); iPhone recibe solo abierta |
 | Pruebas | Sin suite unitaria todavía. Pruebas de punta a punta con `smoke.py` / `fake_peer.py` y dispositivos reales |
 | CI / deploy | Ninguno. Builds locales; APK debug instalado por adb |
 
@@ -32,7 +32,8 @@
 
 ## Puertas mínimas antes de dar algo por terminado
 
-- `cd mac && swift build` sin errores; `./build.sh` si se toca la app.
+- `cd apple && swift build` sin errores; `./build.sh` si se toca la app de Mac.
+- Si se toca `PasalaKit`, `PasalaCore` o `apple/iOS/`: el `xcodebuild` de iPhone de [TESTING.md](TESTING.md) también.
 - `cd android && ./gradlew assembleDebug` sin errores.
 - Camino real según [TESTING.md](TESTING.md) para lo que se tocó.
 - Diff revisado contra la regla de cero datos personales.

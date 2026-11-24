@@ -1,6 +1,6 @@
 # AGENTS.md — Pasala
 
-Pasala pasa archivos entre los dispositivos propios de una persona (Mac ↔ Android ↔ Android),
+Pasala pasa archivos entre los dispositivos propios de una persona (Mac, iPhone y Android, en cualquier combinación),
 por la red local o por Tailscale. Los dispositivos se vinculan una vez escaneando un QR; después
 es peer-to-peer, sin servidor central. La Mac además expone un servidor MCP con el índice de lo recibido.
 
@@ -9,12 +9,13 @@ es peer-to-peer, sin servidor central. La Mac además expone un servidor MCP con
 | Carpeta | Qué es | Reglas propias |
 |---|---|---|
 | `docs/PROTOCOL.md` | **El contrato** entre apps: QR, rutas, cabeceras, colecciones | — |
-| `mac/` | App de Mac (SwiftUI, isla tipo notch + barra de menú) y `pasala-mcp` | [`mac/AGENTS.md`](mac/AGENTS.md) |
+| `apple/` | Paquete Swift: núcleo compartido (`PasalaKit`), app de Mac (isla tipo notch + barra de menú), `pasala-mcp`, y en `apple/iOS/` la app de iPhone con su extensión de Compartir | [`apple/AGENTS.md`](apple/AGENTS.md) |
 | `android/` | App Android (Kotlin + Jetpack Compose) | [`android/AGENTS.md`](android/AGENTS.md) |
 | `docs/brand/` | Ícono y marca (SVG fuente) | — |
 | `docs/engineering/` | Cómo está hecho y cómo se cambia | ver abajo |
 
-Las dos apps **no comparten código**. Lo único compartido es `docs/PROTOCOL.md`.
+Hay **dos códigos**: Apple (Swift; Mac e iPhone comparten `PasalaCore` + `PasalaKit`) y Android (Kotlin).
+Entre los dos, lo único compartido es `docs/PROTOCOL.md`. Ver [D-009](docs/engineering/DECISIONS.md#d-009).
 
 Docs de ingeniería: [perfil](docs/engineering/GUARDRAILS_PROFILE.md) ·
 [mapa del sistema](docs/engineering/SYSTEM_MAP.md) · [decisiones](docs/engineering/DECISIONS.md) ·
@@ -24,8 +25,8 @@ Docs de ingeniería: [perfil](docs/engineering/GUARDRAILS_PROFILE.md) ·
 ## Reglas de este proyecto
 
 1. **Protocolo primero.** Todo cambio en lo que viaja entre dispositivos (rutas, cabeceras, JSON, QR,
-   colecciones) se escribe primero en `docs/PROTOCOL.md` y se implementa en **las dos** apps en el
-   mismo cambio. Un campo nuevo es opcional y el receptor viejo lo ignora; nunca se rompe a un peer
+   colecciones) se escribe primero en `docs/PROTOCOL.md` y se implementa en **los dos** códigos (Apple y Android)
+   en el mismo cambio. Un campo nuevo es opcional y el receptor viejo lo ignora; nunca se rompe a un peer
    con la versión anterior sin subir `v`.
 2. **Cero datos personales en el repo.** Ni nombres reales, ni IPs reales (LAN o Tailscale), ni números
    de serie de dispositivos, ni rutas de una máquina (`/Users/…`, `/Volumes/…`), ni mails, ni capturas
@@ -66,8 +67,10 @@ Docs de ingeniería: [perfil](docs/engineering/GUARDRAILS_PROFILE.md) ·
 
 ```bash
 # Mac
-cd mac && ./build.sh                      # build/Pasala.app (incluye pasala-mcp)
-python3 mac/tools/smoke.py <link> <archivos>   # celular falso contra la Mac
+cd apple && ./build.sh                      # build/Pasala.app (incluye pasala-mcp)
+# iPhone (app + extensión de Compartir)
+xcodebuild -project apple/iOS/Pasala.xcodeproj -scheme PasalaPhone -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+python3 apple/tools/smoke.py <link> <archivos>   # celular falso contra la Mac
 
 # Android
 cd android && JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew assembleDebug

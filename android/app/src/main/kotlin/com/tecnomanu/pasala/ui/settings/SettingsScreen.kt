@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,6 +45,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.tecnomanu.pasala.R
 import com.tecnomanu.pasala.core.Live
 import com.tecnomanu.pasala.data.Store
 import com.tecnomanu.pasala.net.Addresses
@@ -79,14 +82,14 @@ fun SettingsScreen(onBack: () -> Unit) {
             Modifier.fillMaxSize().verticalScroll(rememberScrollState())
                 .padding(start = 20.dp, end = 20.dp, top = top + 8.dp, bottom = bottom + 24.dp),
         ) {
-            IconButton(onClick = { focus.clearFocus(); onBack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Volver", tint = c.text) }
-            Text("Ajustes", style = MaterialTheme.typography.displaySmall, color = c.text, modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 22.dp))
+            IconButton(onClick = { focus.clearFocus(); onBack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back), tint = c.text) }
+            Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.displaySmall, color = c.text, modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 22.dp))
 
-            SectionLabel("Este teléfono")
+            SectionLabel(stringResource(R.string.settings_this_phone))
             Spacer(Modifier.height(10.dp))
             PasalaCard(Modifier.fillMaxWidth()) {
-                Text("Nombre", style = MaterialTheme.typography.titleSmall, color = c.text)
-                Text("Así te ven tus otros dispositivos.", style = MaterialTheme.typography.bodySmall, color = c.muted)
+                Text(stringResource(R.string.settings_name), style = MaterialTheme.typography.titleSmall, color = c.text)
+                Text(stringResource(R.string.settings_name_hint), style = MaterialTheme.typography.bodySmall, color = c.muted)
                 OutlinedTextField(
                     value = name, onValueChange = { name = it.take(60) }, singleLine = true,
                     shape = RoundedCornerShape(18.dp),
@@ -98,14 +101,14 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
 
             Spacer(Modifier.height(22.dp))
-            SectionLabel("Al recibir")
+            SectionLabel(stringResource(R.string.settings_on_receive))
             Spacer(Modifier.height(10.dp))
             PasalaCard(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f).padding(end = 12.dp)) {
-                        Text("Pedir confirmación antes de recibir", style = MaterialTheme.typography.titleSmall, color = c.text)
+                        Text(stringResource(R.string.settings_ask_title), style = MaterialTheme.typography.titleSmall, color = c.text)
                         Text(
-                            "Te preguntamos cada vez que alguien te quiere pasar algo. Si no contestás en un minuto, no se recibe.",
+                            stringResource(R.string.settings_ask_body),
                             style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 2.dp),
                         )
                     }
@@ -119,11 +122,38 @@ fun SettingsScreen(onBack: () -> Unit) {
                     )
                 }
                 Spacer(Modifier.height(16.dp))
-                Text("Dónde se guarda", style = MaterialTheme.typography.titleSmall, color = c.text)
+                Text(stringResource(R.string.settings_where_title), style = MaterialTheme.typography.titleSmall, color = c.text)
                 Text(
-                    "Fotos en Imágenes › Pasala, videos en Películas › Pasala y todo lo demás en Descargas › Pasala. Las fotos y videos aparecen en tu galería.",
+                    stringResource(R.string.settings_where_body),
                     style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 2.dp),
                 )
+            }
+
+            Spacer(Modifier.height(22.dp))
+            var exempt by remember { mutableStateOf(true) }
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+                exempt = com.tecnomanu.pasala.service.Background.isExempt(ctx)
+                onPauseOrDispose { }
+            }
+            PasalaCard(
+                Modifier.fillMaxWidth(),
+                onClick = if (exempt) null else ({ com.tecnomanu.pasala.service.Background.open(ctx) }),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                        Text(stringResource(R.string.settings_background_title), style = MaterialTheme.typography.titleSmall, color = c.text)
+                        Text(
+                            stringResource(if (exempt) R.string.settings_background_on else R.string.settings_background_off),
+                            style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                    if (exempt) {
+                        Icon(Icons.Rounded.CheckCircle, null, tint = c.success)
+                    } else {
+                        Text(stringResource(R.string.battery_allow), style = MaterialTheme.typography.titleSmall, color = Orange)
+                    }
+                }
             }
 
             Spacer(Modifier.height(22.dp))
@@ -133,17 +163,17 @@ fun SettingsScreen(onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().clickable { details = !details },
                 ) {
-                    Text("Detalles", style = MaterialTheme.typography.titleSmall, color = c.text, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.settings_details), style = MaterialTheme.typography.titleSmall, color = c.text, modifier = Modifier.weight(1f))
                     Icon(Icons.Rounded.ExpandMore, null, tint = c.muted, modifier = Modifier.rotate(rot))
                 }
                 AnimatedVisibility(details) {
                     val addrs = remember(details) { Addresses.local() }
                     Column(Modifier.padding(top = 12.dp)) {
-                        Detail("Puerto", if (port > 0) port.toString() else "—")
-                        Detail("Wi-Fi", addrs.lan.joinToString("\n").ifEmpty { "Sin conexión" })
-                        Detail("Tailscale", addrs.tailscale.joinToString("\n").ifEmpty { "Apagado" })
-                        Detail("Identificador", state.identity?.id?.take(8).orEmpty())
-                        Detail("Dispositivos sumados", state.peers.size.toString())
+                        Detail(stringResource(R.string.detail_port), if (port > 0) port.toString() else "—")
+                        Detail(stringResource(R.string.detail_wifi), addrs.lan.joinToString("\n").ifEmpty { stringResource(R.string.detail_no_connection) })
+                        Detail(stringResource(R.string.detail_tailscale), addrs.tailscale.joinToString("\n").ifEmpty { stringResource(R.string.detail_off) })
+                        Detail(stringResource(R.string.detail_id), state.identity?.id?.take(8).orEmpty())
+                        Detail(stringResource(R.string.detail_devices), state.peers.size.toString())
                     }
                 }
             }

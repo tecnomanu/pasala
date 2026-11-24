@@ -23,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import androidx.compose.ui.res.stringResource
+import com.tecnomanu.pasala.R
 import com.tecnomanu.pasala.core.Outgoing
 import com.tecnomanu.pasala.core.Sender
 import com.tecnomanu.pasala.net.Resolver
@@ -56,13 +58,13 @@ class ShareActivity : ComponentActivity() {
                     f == null -> Backdrop { CircularProgressIndicator(Modifier.align(Alignment.Center), color = Orange) }
                     f.isEmpty() -> Backdrop {
                         Column(Modifier.align(Alignment.Center).padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("No hay archivos para pasar", style = MaterialTheme.typography.headlineSmall, color = P.c.text, textAlign = TextAlign.Center)
+                            Text(stringResource(R.string.share_empty_title), style = MaterialTheme.typography.headlineSmall, color = P.c.text, textAlign = TextAlign.Center)
                             Text(
-                                "Pasala manda fotos, videos y archivos. Probá compartir el archivo en vez del texto.",
+                                stringResource(R.string.share_empty_body),
                                 style = MaterialTheme.typography.bodyMedium, color = P.c.muted, textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
                             )
-                            GradientButton("Cerrar", Modifier.size(width = 200.dp, height = 60.dp)) { finish() }
+                            GradientButton(stringResource(R.string.action_close), Modifier.size(width = 200.dp, height = 60.dp)) { finish() }
                         }
                     }
                     else -> SendScreen(
@@ -89,6 +91,13 @@ class ShareActivity : ComponentActivity() {
 
     private fun load(intent: Intent) {
         val uris = sharedUris(intent)
+        // Plain text (no file attached) travels as text, not as a .txt file.
+        val sharedText = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
+        if (uris.isEmpty() && !sharedText.isNullOrBlank()) {
+            startActivity(Intent(this, TextActivity::class.java).putExtra(Intent.EXTRA_TEXT, sharedText))
+            finish()
+            return
+        }
         val type = intent.type
         lifecycleScope.launch {
             files = withContext(Dispatchers.IO) { uris.mapNotNull { Sender.describe(this@ShareActivity, it, type) } }

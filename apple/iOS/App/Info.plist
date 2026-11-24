@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key><string>com.tecnomanu.pasala.pair</string>
+			<key>CFBundleURLSchemes</key><array><string>pasala</string></array>
+		</dict>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key><string>Pasala usa tu red para recibir y mandar archivos a tus dispositivos vinculados.</string>
+	<key>NSBonjourServices</key><array><string>_pasala._tcp</string></array>
+	<key>NSCameraUsageDescription</key><string>Para escanear el código de otro dispositivo y vincularlo.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key><string>Para guardar en Fotos las fotos y videos que te mandan.</string>
+	<key>UIFileSharingEnabled</key><true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key><true/>
+</dict>
+</plist>

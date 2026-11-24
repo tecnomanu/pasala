@@ -3,6 +3,7 @@ import AppKit
 import CoreImage.CIFilterBuiltins
 import UniformTypeIdentifiers
 import PasalaCore
+import PasalaKit
 
 @MainActor
 final class Windows {
@@ -10,7 +11,7 @@ final class Windows {
     private var windows: [String: NSWindow] = [:]
     let sendModel = SendModel()
 
-    private func show<V: View>(_ key: String, title: String, size: CGSize, resizable: Bool = true, @ViewBuilder _ view: () -> V) {
+    private func show<V: View>(_ key: String, title: String, size: CGSize, resizable: Bool = true, fitsContent: Bool = false, @ViewBuilder _ view: () -> V) {
         if let w = windows[key] { w.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
         var mask: NSWindow.StyleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
         if resizable { mask.insert(.resizable) }
@@ -23,7 +24,7 @@ final class Windows {
         w.appearance = NSAppearance(named: .darkAqua)
         w.isReleasedWhenClosed = false
         let host = NSHostingView(rootView: view().environmentObject(Engine.shared))
-        host.sizingOptions = []          // See HISTORY.md#window-size
+        host.sizingOptions = fitsContent ? [.preferredContentSize] : []          // See HISTORY.md#window-size
         w.contentView = host
         w.center()
         w.setFrameAutosaveName("pasala.\(key)")
@@ -33,15 +34,15 @@ final class Windows {
     }
 
     func showMain() { show("main", title: "Pasala", size: CGSize(width: 1120, height: 740)) { MainView() } }
-    func showPair() { show("pair", title: "Sumar dispositivo", size: CGSize(width: 520, height: 680), resizable: false) { PairView() } }
+    func showPair() { show("pair", title: String(localized: "Sumar dispositivo"), size: CGSize(width: 520, height: 680), resizable: false) { PairView() } }
     func showSend(to peerId: String?) {
         if let peerId { sendModel.target = peerId }
         else if sendModel.target == nil || !Engine.shared.peers.contains(where: { $0.id == sendModel.target }) {
             sendModel.target = Engine.shared.peers.first(where: { Engine.shared.online.contains($0.id) })?.id ?? Engine.shared.peers.first?.id
         }
-        show("send", title: "Enviar", size: CGSize(width: 560, height: 600), resizable: false) { SendView(model: sendModel) }
+        show("send", title: String(localized: "Enviar"), size: CGSize(width: 560, height: 600), resizable: false) { SendView(model: sendModel) }
     }
-    func showSettings() { show("settings", title: "Ajustes", size: CGSize(width: 540, height: 660), resizable: false) { SettingsView() } }
+    func showSettings() { show("settings", title: String(localized: "Ajustes"), size: CGSize(width: 540, height: 560), resizable: false, fitsContent: true) { SettingsView() } }
 }
 
 // MARK: - Background
@@ -78,9 +79,9 @@ struct MainView: View {
     }
 
     var title: String {
-        if filter == "out" { return "Lo que mandaste" }
+        if filter == "out" { return String(localized: "Lo que mandaste") }
         if filter.hasPrefix("col:"), let c = engine.collections.first(where: { "col:\($0.id)" == filter }) { return c.name }
-        return "Lo que llegó"
+        return String(localized: "Lo que llegó")
     }
 
     var body: some View {
@@ -115,7 +116,7 @@ struct MainView: View {
                     Text("Escaneá el código con tu celular para empezar.").font(.system(size: 13, design: .rounded)).foregroundStyle(Theme.dim)
                 }
                 ForEach(engine.peers) { p in PeerRow(peer: p, selected: filter == p.id) { filter = p.id } }
-                GlowButton(title: "Sumar dispositivo", icon: "qrcode") { Windows.shared.showPair() }.padding(.top, 4)
+                GlowButton(title: String(localized: "Sumar dispositivo"), icon: "qrcode") { Windows.shared.showPair() }.padding(.top, 4)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -153,11 +154,7 @@ struct MainView: View {
                 Text(title).font(.system(size: 30, weight: .heavy, design: .rounded)).lineLimit(1)
                 Text("\(files.count)").font(.system(size: 15, weight: .bold, design: .rounded)).foregroundStyle(Theme.dim)
                 Spacer()
-                Picker("", selection: $filter) {
-                    Text("Recibido").tag("in"); Text("Enviado").tag("out")
-                    ForEach(engine.peers) { Text($0.name).tag($0.id) }
-                    ForEach(engine.collections) { Text($0.name).tag("col:\($0.id)") }
-                }.pickerStyle(.menu).frame(maxWidth: 220)
+                FilterMenu(filter: $filter)
             }
             .padding(.top, 38)
 
@@ -212,10 +209,10 @@ struct MainView: View {
 
 func byDay(_ files: [FileRecord]) -> [(String, [FileRecord])] {
     let cal = Calendar.current
-    let f = DateFormatter(); f.locale = Locale(identifier: "es_AR"); f.setLocalizedDateFormatFromTemplate("EEEE d MMMM")
+    let f = DateFormatter(); f.locale = Locale.current; f.setLocalizedDateFormatFromTemplate("EEEE d MMMM")
     var out: [(String, [FileRecord])] = []
     for file in files {
-        let label = cal.isDateInToday(file.createdAt) ? "Hoy" : cal.isDateInYesterday(file.createdAt) ? "Ayer" : f.string(from: file.createdAt).capitalized
+        let label = cal.isDateInToday(file.createdAt) ? String(localized: "Hoy") : cal.isDateInYesterday(file.createdAt) ? String(localized: "Ayer") : f.string(from: file.createdAt).capitalized
         if out.last?.0 == label { out[out.count - 1].1.append(file) } else { out.append((label, [file])) }
     }
     return out
@@ -233,7 +230,17 @@ struct HeroStack: View {
             ZStack {
                 ForEach(Array(cards.enumerated()), id: \.element.id) { i, f in
                     let n = Double(cards.count), center = (n - 1) / 2, k = Double(i) - center
-                    Thumb(url: f.url, mime: f.mime, corner: 22)
+                    Group {
+                        if f.mime == Engine.snippetMime {
+                            Text(Engine.shared.snippetText(f) ?? f.name)
+                                .font(.system(size: 14, weight: .medium, design: .rounded)).foregroundStyle(.white.opacity(0.92))
+                                .lineLimit(9).padding(16)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                                .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.surface2))
+                        } else {
+                            Thumb(url: f.url, mime: f.mime, corner: 22)
+                        }
+                    }
                         .frame(width: 190, height: 236)
                         .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(.white.opacity(0.14), lineWidth: 1))
                         .shadow(color: .black.opacity(0.45), radius: 18, y: 12)
@@ -255,14 +262,18 @@ struct HeroStack: View {
                     Text(summary).font(.system(size: 28, weight: .heavy, design: .rounded)).lineLimit(2)
                     HStack(spacing: 8) {
                         DeviceGlyph(platform: Engine.shared.peers.first { $0.id == top.peerId }?.platform ?? "android", online: true, size: 22)
-                        Text("\(top.direction == "in" ? "De" : "A") \(top.peerName) · \(top.createdAt.relative) · \(formatBytes(batch.reduce(0) { $0 + $1.size }))")
+                        Text((top.direction == "in" ? String(localized: "De \(top.peerName)") : String(localized: "A \(top.peerName)")) + " · \(top.createdAt.relative) · \(formatBytes(batch.reduce(0) { $0 + $1.size }))")
                             .font(.system(size: 13, design: .rounded)).foregroundStyle(Theme.dim)
                     }
                     HStack(spacing: 8) {
-                        GlowButton(title: "Mostrar en Finder", icon: "folder.fill") {
+                        if top.mime == Engine.snippetMime {
+                            GlowButton(title: String(localized: "Copiar"), icon: "doc.on.doc") { copyToClipboard(top) }
+                        } else {
+                        GlowButton(title: String(localized: "Mostrar en Finder"), icon: "folder.fill") {
                             NSWorkspace.shared.activateFileViewerSelecting(batch.map(\.url).filter { FileManager.default.fileExists(atPath: $0.path) })
                         }
-                        if batch.count == 1 { GlowButton(title: "Abrir", prominent: false) { NSWorkspace.shared.open(top.url) } }
+                        }
+                        if batch.count == 1 { GlowButton(title: String(localized: "Abrir"), prominent: false) { NSWorkspace.shared.open(top.url) } }
                     }.padding(.top, 6)
                 }
             }
@@ -277,16 +288,17 @@ struct HeroStack: View {
     var summary: String {
         let kinds = Set(batch.map { Mime.kind($0.mime) })
         let n = batch.count
-        if kinds == ["image"] { return n == 1 ? "Una foto" : "\(n) fotos" }
-        if kinds == ["video"] { return n == 1 ? "Un video" : "\(n) videos" }
-        if kinds.isSubset(of: ["image", "video"]) { return "\(n) fotos y videos" }
-        return n == 1 ? batch[0].name : "\(n) archivos"
+        if batch.first?.mime == Engine.snippetMime { return String(localized: "Texto listo para copiar") }
+        if kinds == ["image"] { return n == 1 ? String(localized: "Una foto") : String(localized: "\(n) fotos") }
+        if kinds == ["video"] { return n == 1 ? String(localized: "Un video") : String(localized: "\(n) videos") }
+        if kinds.isSubset(of: ["image", "video"]) { return String(localized: "\(n) fotos y videos") }
+        return n == 1 ? batch[0].name : String(localized: "\(n) archivos")
     }
 }
 
 @MainActor func newCollection(_ engine: Engine) {
     let p = NSOpenPanel(); p.canChooseDirectories = true; p.canChooseFiles = false; p.canCreateDirectories = true
-    p.prompt = "Usar como colección"; p.message = "Elegí o creá la carpeta. El nombre de la colección es el de la carpeta (después lo podés cambiar)."
+    p.prompt = String(localized: "Usar como colección"); p.message = String(localized: "Elegí o creá la carpeta. El nombre de la colección es el de la carpeta (después lo podés cambiar).")
     NSApp.activate(ignoringOtherApps: true)
     if p.runModal() == .OK, let u = p.url { engine.addCollection(folder: u) }
 }
@@ -336,6 +348,47 @@ struct CollectionRow: View {
     }
 }
 
+/// Deck filter: received, sent, one device or one collection, styled like the rest of the app.
+struct FilterMenu: View {
+    @EnvironmentObject var engine: Engine
+    @Binding var filter: String
+
+    var label: String {
+        switch filter {
+        case "in": return String(localized: "Recibido")
+        case "out": return String(localized: "Enviado")
+        case let f where f.hasPrefix("col:"): return engine.collections.first { "col:\($0.id)" == f }?.name ?? String(localized: "Recibido")
+        default: return engine.peers.first { $0.id == filter }?.name ?? String(localized: "Recibido")
+        }
+    }
+
+    var body: some View {
+        Menu {
+            Button(String(localized: "Recibido")) { filter = "in" }
+            Button(String(localized: "Enviado")) { filter = "out" }
+            if !engine.peers.isEmpty {
+                Divider()
+                ForEach(engine.peers) { p in Button(p.name) { filter = p.id } }
+            }
+            if !engine.collections.isEmpty {
+                Divider()
+                ForEach(engine.collections) { c in Button(c.name) { filter = "col:\(c.id)" } }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "line.3.horizontal.decrease").font(.system(size: 11, weight: .bold))
+                Text(label).font(.system(size: 12.5, weight: .semibold, design: .rounded)).lineLimit(1)
+                Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.dim)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14).padding(.vertical, 8)
+            .background(Capsule().fill(Theme.surface))
+            .overlay(Capsule().strokeBorder(Theme.brand.opacity(0.7), lineWidth: 1))
+        }
+        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+    }
+}
+
 struct PeerRow: View {
     @EnvironmentObject var engine: Engine
     let peer: Peer
@@ -350,7 +403,7 @@ struct PeerRow: View {
             DeviceGlyph(platform: peer.platform, online: engine.online.contains(peer.id), size: 34)
             VStack(alignment: .leading, spacing: 2) {
                 Text(peer.name).font(.system(size: 13.5, weight: .semibold, design: .rounded)).lineLimit(1)
-                Text(engine.online.contains(peer.id) ? "Conectado" : (peer.lastSeen.map { "Visto \($0.relative)" } ?? "Sin conexión"))
+                Text(engine.online.contains(peer.id) ? String(localized: "Conectado") : (peer.lastSeen.map { String(localized: "Visto \($0.relative)") } ?? String(localized: "Sin conexión")))
                     .font(.system(size: 11, design: .rounded)).foregroundStyle(engine.online.contains(peer.id) ? Theme.mint : Theme.dim)
             }
             Spacer()
@@ -391,7 +444,18 @@ struct DeckCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Thumb(url: file.url, mime: file.mime, corner: 0)
+            Group {
+                if file.mime == Engine.snippetMime {
+                    Text(Engine.shared.snippetText(file) ?? file.name)
+                        .font(.system(size: 13, design: .rounded)).foregroundStyle(.white.opacity(0.9))
+                        .lineLimit(6)
+                        .padding(.horizontal, 14).padding(.top, 44).padding(.bottom, 10)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .background(LinearGradient(colors: [Theme.surface2, Theme.surface], startPoint: .top, endPoint: .bottom))
+                } else {
+                    Thumb(url: file.url, mime: file.mime, corner: 0)
+                }
+            }
                 .frame(height: 170)
                 .clipped()
                 .overlay(alignment: .topLeading) {
@@ -418,14 +482,15 @@ struct DeckCard: View {
         .opacity(exists ? 1 : 0.45)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: hover)
         .onHover { hover = $0 }
-        .onTapGesture(count: 2) { if exists { NSWorkspace.shared.open(file.url) } }
+        .onTapGesture(count: 2) { if file.mime == Engine.snippetMime { copyToClipboard(file) } else if exists { NSWorkspace.shared.open(file.url) } }
         .onDrag { NSItemProvider(contentsOf: file.url) ?? NSItemProvider() }
         .contextMenu {
             Button("Abrir") { NSWorkspace.shared.open(file.url) }
             Button("Mostrar en Finder") { NSWorkspace.shared.activateFileViewerSelecting([file.url]) }
+            Button("Copiar") { copyToClipboard(file) }
             Button("Copiar ruta") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(file.path, forType: .string) }
         }
-        .help(exists ? "Doble clic para abrir" : "Este archivo ya no está en la carpeta")
+        .help(file.mime == Engine.snippetMime ? String(localized: "Doble clic para copiar") : exists ? String(localized: "Doble clic para abrir") : String(localized: "Este archivo ya no está en la carpeta"))
     }
 }
 
@@ -442,7 +507,7 @@ struct LiveBanner: View {
                 }
             }.frame(width: 64)
             VStack(alignment: .leading, spacing: 6) {
-                Text(transfer.direction == .incoming ? "Llegando de \(transfer.peerName)" : "Mandando a \(transfer.peerName)")
+                Text(transfer.direction == .incoming ? String(localized: "Llegando de \(transfer.peerName)") : String(localized: "Mandando a \(transfer.peerName)"))
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                 GeometryReader { g in
                     ZStack(alignment: .leading) {
@@ -477,10 +542,10 @@ struct EmptyDeck: View {
                     .offset(y: float ? -10 : 6).rotationEffect(.degrees(float ? -6 : 4))
             }
             .frame(height: 200)
-            Text(hasPeers ? "Todavía no llegó nada" : "Vinculá tu celular").font(.system(size: 20, weight: .bold, design: .rounded))
-            Text(hasPeers ? "Compartí algo desde el celular y elegí Pasala. Lo vas a ver caer acá." : "Abrí Pasala en el celular y escaneá el código de esta Mac.")
+            Text(hasPeers ? String(localized: "Todavía no llegó nada") : String(localized: "Vinculá tu celular")).font(.system(size: 20, weight: .bold, design: .rounded))
+            Text(hasPeers ? String(localized: "Compartí algo desde el celular y elegí Pasala. Lo vas a ver caer acá.") : String(localized: "Abrí Pasala en el celular y escaneá el código de esta Mac."))
                 .font(.system(size: 14, design: .rounded)).foregroundStyle(Theme.dim).multilineTextAlignment(.center)
-            if !hasPeers { GlowButton(title: "Mostrar código", icon: "qrcode") { Windows.shared.showPair() } }
+            if !hasPeers { GlowButton(title: String(localized: "Mostrar código"), icon: "qrcode") { Windows.shared.showPair() } }
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -578,7 +643,7 @@ struct SendView: View {
                 Text("Enviar").font(.system(size: 26, weight: .heavy, design: .rounded)).padding(.top, 34)
                 if engine.peers.isEmpty {
                     Text("Primero vinculá un dispositivo.").foregroundStyle(Theme.dim)
-                    GlowButton(title: "Sumar dispositivo", icon: "qrcode") { Windows.shared.showPair() }
+                    GlowButton(title: String(localized: "Sumar dispositivo"), icon: "qrcode") { Windows.shared.showPair() }
                     Spacer()
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -602,7 +667,7 @@ struct SendView: View {
                             Text("¿En qué colección?").font(.system(size: 12, weight: .semibold, design: .rounded)).foregroundStyle(Theme.dim)
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
-                                    chip("Ninguna", icon: "tray", selected: model.collection == nil) { model.collection = nil }
+                                    chip(String(localized: "Ninguna"), icon: "tray", selected: model.collection == nil) { model.collection = nil }
                                     ForEach(cols) { c in chip(c.name, icon: "folder.fill", selected: model.collection == c.id) { model.collection = c.id } }
                                 }
                             }
@@ -632,10 +697,10 @@ struct SendView: View {
                             ProgressRing(progress: t.progress, size: 22)
                             Text("Mandando… \(Int(t.progress * 100))%").font(.system(size: 13, design: .rounded)).foregroundStyle(Theme.dim)
                         } else if let m = model.message {
-                            Text(m).font(.system(size: 13, design: .rounded)).foregroundStyle(m.hasPrefix("Listo") ? Theme.mint : Theme.orange)
+                            Text(m).font(.system(size: 13, design: .rounded)).foregroundStyle(m.hasPrefix(String(localized: "Listo")) ? Theme.mint : Theme.orange)
                         }
                         Spacer()
-                        GlowButton(title: model.files.isEmpty ? "Elegir archivos" : "Enviar \(model.files.count)", icon: "arrow.up.circle.fill") {
+                        GlowButton(title: model.files.isEmpty ? String(localized: "Elegir archivos") : String(localized: "Enviar \(model.files.count)"), icon: "arrow.up.circle.fill") {
                             if model.files.isEmpty { pick() } else { send() }
                         }
                         .disabled(model.sending || model.target == nil)
@@ -666,7 +731,7 @@ struct SendView: View {
         VStack(spacing: 10) {
             Image(systemName: "tray.and.arrow.up.fill").font(.system(size: 34, weight: .semibold)).foregroundStyle(Theme.brand)
                 .scaleEffect(targeted ? 1.15 : 1)
-            Text(targeted ? "Soltalos" : "Arrastrá archivos acá").font(.system(size: 16, weight: .bold, design: .rounded))
+            Text(targeted ? String(localized: "Soltalos") : String(localized: "Arrastrá archivos acá")).font(.system(size: 16, weight: .bold, design: .rounded))
             Button("o elegilos del disco") { pick() }.buttonStyle(.link).font(.system(size: 12.5, design: .rounded))
         }
         .frame(maxWidth: .infinity, minHeight: 200)
@@ -692,7 +757,7 @@ struct SendView: View {
         Task {
             let err = await engine.send(urls, to: peer, collection: model.collection)
             model.sending = false
-            if let err { model.message = err } else { model.message = "Listo, \(peer.name) ya los tiene."; model.files = [] }
+            if let err { model.message = err } else { model.message = String(localized: "Listo, \(peer.name) ya los tiene."); model.files = [] }
         }
     }
 }
@@ -702,9 +767,8 @@ struct SendView: View {
 struct SettingsView: View {
     @EnvironmentObject var engine: Engine
     @State private var name = ""
+    @State private var showDetails = false
     var body: some View {
-        ZStack {
-            Aurora()
             VStack(alignment: .leading, spacing: 20) {
                 Text("Ajustes").font(.system(size: 26, weight: .heavy, design: .rounded)).padding(.top, 34)
                 VStack(alignment: .leading, spacing: 6) {
@@ -740,14 +804,29 @@ struct SettingsView: View {
                 }
                 Toggle("Preguntarme antes de recibir", isOn: Binding(get: { engine.askBeforeReceiving }, set: { engine.setAsk($0) }))
                     .toggleStyle(.switch)
-                DisclosureGroup("Detalles de conexión") {
-                    Text("Direcciones: \(engine.addrs.joined(separator: ", ")) · puerto \(engine.port)")
-                        .font(.system(size: 11, design: .monospaced)).foregroundStyle(Theme.dim).textSelection(.enabled)
-                }.font(.system(size: 12, design: .rounded))
-                Spacer()
+                VStack(alignment: .leading, spacing: 8) {
+                    Button { withAnimation(.easeOut(duration: 0.2)) { showDetails.toggle() } } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold))
+                                .rotationEffect(.degrees(showDetails ? 90 : 0))
+                            Text("Detalles de conexión").font(.system(size: 12, weight: .semibold, design: .rounded))
+                            Spacer()
+                        }
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    if showDetails {
+                        Text("Direcciones: \(engine.addrs.joined(separator: ", ")) · puerto \(engine.port)")
+                            .font(.system(size: 11, design: .monospaced)).foregroundStyle(Theme.dim).textSelection(.enabled)
+                    }
+                }
             }
             .padding(.horizontal, 30)
-        }
+            .padding(.bottom, 28)
+            .frame(width: 540, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .background(Aurora())
         .preferredColorScheme(.dark)
         .onAppear { name = engine.deviceName }
     }

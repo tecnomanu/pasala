@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.FolderZip
 import androidx.compose.material.icons.rounded.InsertDriveFile
 import androidx.compose.material.icons.rounded.Laptop
 import androidx.compose.material.icons.rounded.PhoneAndroid
+import androidx.compose.material.icons.rounded.PhoneIphone
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
@@ -180,6 +181,7 @@ fun SoftButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit)
 fun platformIcon(platform: String): ImageVector = when (platform) {
     "mac" -> Icons.Rounded.Laptop
     "android" -> Icons.Rounded.PhoneAndroid
+    "ios" -> Icons.Rounded.PhoneIphone
     else -> Icons.Rounded.Computer
 }
 

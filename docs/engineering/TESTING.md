@@ -6,7 +6,7 @@ herramienta que hace de "la otra punta".
 ## Mac
 
 ```bash
-cd mac
+cd apple
 swift build                                   # compila los tres targets
 ./build.sh                                    # build/Pasala.app firmada ad hoc
 cp -R build/Pasala.app /Applications/ && open /Applications/Pasala.app
@@ -16,7 +16,7 @@ Celular falso contra la Mac (vincula, manda, espera que la Mac le mande algo):
 
 ```bash
 PASALA_DEBUG=1 /Applications/Pasala.app/Contents/MacOS/Pasala &      # escribe debug-pair.txt
-python3 mac/tools/smoke.py "$(cat ~/Library/Application\ Support/Pasala/debug-pair.txt)" foto.jpg
+python3 apple/tools/smoke.py "$(cat ~/Library/Application\ Support/Pasala/debug-pair.txt)" foto.jpg
 ```
 
 MCP por stdio:
@@ -27,7 +27,22 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
   | /Applications/Pasala.app/Contents/MacOS/pasala-mcp
 ```
 
-Ver la isla abierta sin pasar el mouse: `PASALA_ISLAND=open`.
+Ver la isla abierta sin pasar el mouse: `PASALA_ISLAND=open`. En inglés: agregar `-AppleLanguages "(en)"` al
+ejecutable. Texto por MCP: `pasala_send_text`.
+
+## iPhone
+
+```bash
+cd apple/iOS
+xcodebuild -project Pasala.xcodeproj -scheme PasalaPhone \
+  -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+```
+
+- Correr: hace falta un runtime de simulador de iOS (`xcodebuild -downloadPlatform iOS`) o un iPhone con
+  equipo de firma configurado en el proyecto.
+- En el simulador el iPhone comparte la red de la Mac: si la app de Mac usa el 47820, el iPhone toma el
+  siguiente puerto libre. Sirve para probar Mac ↔ iPhone y Android ↔ iPhone por la LAN.
+- Vincular sin cámara: abrir el link `pasala://pair?d=…` (`xcrun simctl openurl booted '<link>'`).
 
 ## Android
 
@@ -42,7 +57,15 @@ python3 tools/fake_peer.py --help             # pair / send / serve / unpair
 - Vincular sin cámara: `adb shell am start -a android.intent.action.VIEW -d '<pasala://pair?d=…>'`.
 - Compartir hacia la app: `adb shell am start -a android.intent.action.SEND -t image/jpeg --eu android.intent.extra.STREAM <content://…> -n com.tecnomanu.pasala/.ui.send.ShareActivity`
   (con un archivo que la app pueda leer, p. ej. uno que ella misma recibió).
-- `fake_peer.py serve --collections "a,b"` anuncia colecciones e imprime la que llega.
+- `fake_peer.py serve --collections "a,b"` anuncia colecciones e imprime la que llega; también imprime los textos
+  (`/v1/text`) que recibe. `fake_peer.py text "hola"` (o `text @archivo.txt`, `--id X` para probar repetidos) manda uno.
+- Texto desde el celular sin tocar otra app: `adb shell "am start -a android.intent.action.PROCESS_TEXT -t text/plain --es android.intent.extra.PROCESS_TEXT 'hola' -n com.tecnomanu.pasala/.ui.send.TextActivity"`;
+  compartir texto: lo mismo con `-a android.intent.action.SEND --es android.intent.extra.TEXT '…' -n …/.ui.send.ShareActivity`.
+- Idioma: `adb shell cmd locale set-app-locales com.tecnomanu.pasala --locales en-US` (vacío = el del sistema).
+- Con la pantalla apagada: `curl -X POST http://<ip>:47820/v1/hello` tiene que contestar `401` enseguida; para
+  simular reposo sin desenchufar: `dumpsys battery unplug` + `dumpsys deviceidle force-idle light` (y `unforce` /
+  `battery reset` al terminar). Ver `HISTORY.md#idle-reachability`.
+- Contra un emulador, `--connect 127.0.0.1:<puerto>` con `adb forward` (el emulador no es alcanzable por su IP).
 
 ## Camino real (lo que hay que probar según lo que se tocó)
 

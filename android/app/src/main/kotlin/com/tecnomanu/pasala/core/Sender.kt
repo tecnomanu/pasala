@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileNotFoundException
 import java.util.UUID
@@ -187,6 +188,37 @@ object Sender {
             out.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 82, it) }
             out.absolutePath
         }.getOrNull()
+    }
+
+    enum class TextResult { Ok, Unreachable, TooLarge, Failed }
+
+    /** Sends one text (`/v1/text`) and records it in the activity list. */
+    suspend fun sendText(context: Context, peerId: String, text: String): TextResult = withContext(Dispatchers.IO) {
+        if (text.toByteArray(Charsets.UTF_8).size > com.tecnomanu.pasala.data.TEXT_MAX_BYTES) return@withContext TextResult.TooLarge
+        val peer = Store.peer(peerId) ?: return@withContext TextResult.Failed
+        val route = Resolver.reach(peer) ?: return@withContext TextResult.Unreachable
+        val fresh = Store.peer(peerId) ?: peer
+        val id = UUID.randomUUID().toString()
+        try {
+            PasalaClient.text(route.host, route.port, fresh, com.tecnomanu.pasala.data.TextRequest(id, text))
+        } catch (e: HttpStatusException) {
+            Log.w(TAG, "text failed: ${e.message}")
+            return@withContext if (e.code == 413) TextResult.TooLarge else TextResult.Failed
+        } catch (e: Exception) {
+            Log.w(TAG, "text failed: ${e.message}")
+            return@withContext TextResult.Failed
+        }
+        val itemId = "text-$id"
+        runCatching { com.tecnomanu.pasala.data.TextStore.save(context, itemId, text) }
+            .onFailure { Log.w(TAG, "could not keep sent text: ${it.message}") }
+        Store.addHistory(
+            HistoryItem(
+                id = itemId, direction = "out", peerId = peerId, peerName = fresh.displayName, name = "",
+                size = text.toByteArray(Charsets.UTF_8).size.toLong(), mime = com.tecnomanu.pasala.data.TEXT_MIME,
+                time = System.currentTimeMillis(), text = com.tecnomanu.pasala.data.TextStore.preview(text),
+            )
+        )
+        TextResult.Ok
     }
 
     fun forget(jobId: String) {

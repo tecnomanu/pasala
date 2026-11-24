@@ -24,11 +24,14 @@ Commands
                         Files go to --out (default ./received); a file offered into a
                         collection goes to --out/<collection name>/. Collections are
                         advertised in the hello reply (ids are c-<slug>).
+  text "TEXT"|@FILE [--peer ID] [--id ID]
+                        POST /v1/text (a text ready to copy on the other side).
   unpair [--peer ID]    POST /v1/unpair and forget the peer.
   peers                 List known peers.
 
 Common options: --port (default 47821; the real Mac app uses 47820), --name,
---adb-serial (for logcat), --addr (override advertised address list).
+--adb-serial (for logcat), --addr (override advertised address list),
+--connect HOST:PORT (reach the other side there, e.g. an emulator through `adb forward`).
 """
 import argparse
 import base64
@@ -163,8 +166,13 @@ def auth(st, peer):
     return {"X-Pasala-From": st.id, "Authorization": "Bearer " + peer["secret"]}
 
 
+CONNECT = None  # (host, port) override from --connect
+
+
 def reach(st, pid, peer):
     """Protocol § Elegir dirección: last good, then stored addrs; hello with 2 s connect timeout."""
+    if CONNECT:
+        peer = dict(peer, lastGood=CONNECT[0], addrs=[CONNECT[0]], port=CONNECT[1])
     cands = []
     if peer.get("lastGood"):
         cands.append(peer["lastGood"])
@@ -205,14 +213,15 @@ def cmd_pair(st, args):
     qr = json.loads(b64url_decode(d))
     log(f"pairing with {qr['name']} ({qr['platform']}) at {qr['addrs']}:{qr['port']}")
     body = {"code": qr["code"], **{k: v for k, v in st.me().items() if k != "platform"}, "platform": "mac"}
-    for host in qr["addrs"]:
+    targets = [CONNECT] if CONNECT else [(h, qr["port"]) for h in qr["addrs"]]
+    for host, port in targets:
         try:
-            code, resp = http_post(f"http://{host}:{qr['port']}/v1/pair", body, timeout=4)
+            code, resp = http_post(f"http://{host}:{port}/v1/pair", body, timeout=4)
         except Exception as e:
             log(f"{host}: {e}")
             continue
         if code == 200:
-            st.peers[resp["id"]] = {"name": resp["name"], "platform": resp["platform"], "port": resp["port"],
+            st.peers[resp["id"]] = {"name": resp["name"], "platform": resp["platform"], "port": resp["port"] if not CONNECT else port,
                                    "addrs": resp["addrs"], "secret": resp["secret"],
                                    "pairedAt": int(time.time() * 1000), "lastGood": host}
             st.save()
@@ -233,6 +242,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
     paired_event = threading.Event()
     ask = False
     collections = []  # [{"id","name"}] advertised in hello
+    texts_seen = set()
 
     def log_message(self, fmt, *a):
         pass
@@ -345,6 +355,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
             log(f"received {final} ({n} bytes, {self.headers.get('X-Pasala-Mime')}) "
                 f"[{int(self.headers.get('X-Pasala-Index', 0)) + 1}/{self.headers.get('X-Pasala-Count')}] from {peer['name']}")
             return self.reply(200, {"ok": True, "name": final})
+        if path == "/v1/text":
+            n = int(self.headers.get("Content-Length") or 0)
+            if n > 2 << 20:
+                return self.reply(413, {"error": "too_large"})
+            b = json.loads(self.rfile.read(n) or b"{}")
+            text = b.get("text", "")
+            if len(text.encode()) > 1 << 20:
+                return self.reply(413, {"error": "too_large"})
+            dup = b.get("id") in Handler.texts_seen
+            Handler.texts_seen.add(b.get("id"))
+            log(f"text from {peer['name']} id={b.get('id')}{' (duplicate, ignored)' if dup else ''}: {text!r}")
+            return self.reply(200, {"ok": True})
         if path == "/v1/unpair":
             with st.lock:
                 st.peers.pop(pid, None)
@@ -458,6 +480,19 @@ def cmd_send(st, args):
             sys.exit(3)
 
 
+def cmd_text(st, args):
+    pid, peer = st.pick_peer(args.peer)
+    host, _ = reach(st, pid, peer)
+    if not host:
+        sys.exit(f"{peer['name']} is not reachable")
+    port = CONNECT[1] if CONNECT else peer["port"]
+    text = open(args.text[1:], encoding="utf-8").read() if args.text.startswith("@") else args.text
+    body = {"id": args.id or str(uuid.uuid4()), "text": text}
+    code, resp = http_post(f"http://{host}:{port}/v1/text", body, auth(st, peer), timeout=10)
+    log(f"text -> {code} {resp}")
+    sys.exit(0 if code == 200 else 4)
+
+
 def cmd_unpair(st, args):
     pid, peer = st.pick_peer(args.peer)
     host, _ = reach(st, pid, peer)
@@ -487,12 +522,18 @@ def main():
     p = sub.add_parser("hello"); p.add_argument("--peer")
     p = sub.add_parser("send"); p.add_argument("files", nargs="+"); p.add_argument("--peer"); p.add_argument("--collection")
     p = sub.add_parser("serve"); p.add_argument("--ask", action="store_true"); p.add_argument("--collections")
+    p = sub.add_parser("text"); p.add_argument("text"); p.add_argument("--peer"); p.add_argument("--id", help="reuse an id (tests duplicates)")
     p = sub.add_parser("unpair"); p.add_argument("--peer")
     sub.add_parser("peers")
+    ap.add_argument("--connect", metavar="HOST:PORT")
     args = ap.parse_args()
+    global CONNECT
+    if args.connect:
+        h, _, p = args.connect.rpartition(":")
+        CONNECT = (h, int(p))
     st = State(args.state, args.name, args.port, args.addr)
     {"pair": cmd_pair, "show-code": cmd_show_code, "hello": cmd_hello, "send": cmd_send,
-     "serve": cmd_serve, "unpair": cmd_unpair, "peers": cmd_peers}[args.cmd](st, args)
+     "serve": cmd_serve, "unpair": cmd_unpair, "peers": cmd_peers, "text": cmd_text}[args.cmd](st, args)
 
 
 if __name__ == "__main__":

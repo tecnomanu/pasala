@@ -86,6 +86,9 @@ let tools: [[String: Any]] = [
     ["name": "pasala_pair",
      "description": "Pair this Mac with another device using its pairing link (pasala://pair?d=...), the same text its QR shows.",
      "inputSchema": ["type": "object", "properties": ["link": ["type": "string"]], "required": ["link"]]],
+    ["name": "pasala_send_text",
+     "description": "Send a piece of text to a paired device; it shows there as 'text ready to copy' (the device's clipboard is not touched). Received texts appear in the index with mime text/x-pasala-snippet; use pasala_get_file with include_content to read one.",
+     "inputSchema": ["type": "object", "properties": ["text": ["type": "string"], "device": ["type": "string"]], "required": ["text", "device"]]],
     ["name": "pasala_send",
      "description": "Send local files from this Mac to a paired device (needs the Pasala app running). The device can be a name or id.",
      "inputSchema": ["type": "object", "properties": ["paths": ["type": "array", "items": ["type": "string"]], "device": ["type": "string"],
@@ -130,7 +133,7 @@ func call(_ name: String, _ a: [String: Any]) -> [String: Any] {
             if f.mime.hasPrefix("image/"), f.size <= 8 << 20, let d = try? Data(contentsOf: f.url),
                ["image/png", "image/jpeg", "image/gif", "image/webp"].contains(f.mime) {
                 content.append(["type": "image", "data": d.base64EncodedString(), "mimeType": f.mime])
-            } else if (f.mime.hasPrefix("text/") || f.mime == "application/json"), f.size <= 256 << 10,
+            } else if (f.mime.hasPrefix("text/") || f.mime == "application/json"), f.size <= 1 << 20,
                       let s = try? String(contentsOf: f.url, encoding: .utf8) {
                 content.append(["type": "text", "text": s])
             } else {
@@ -165,6 +168,12 @@ func call(_ name: String, _ a: [String: Any]) -> [String: Any] {
             return fail("The Pasala app is not running on this Mac. Open it and try again.")
         }
         return status == 200 ? text(body) : fail("\(body["error"] ?? "Pairing failed")")
+    case "pasala_send_text":
+        guard let t = a["text"] as? String, !t.isEmpty, let dev = a["device"] as? String else { return fail("text and device are required.") }
+        guard let (status, body) = localCall("/local/text", body: ["text": t, "device": dev], timeout: 30) else {
+            return fail("The Pasala app is not running on this Mac. Open it and try again.")
+        }
+        return status == 200 ? text(body) : fail("Send failed (\(status)): \(body)")
     case "pasala_send":
         guard let paths = a["paths"] as? [String], !paths.isEmpty, let dev = a["device"] as? String else { return fail("paths and device are required.") }
         var req: [String: Any] = ["paths": paths, "device": dev]

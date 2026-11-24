@@ -78,6 +78,8 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.journeyapps.barcodescanner.BarcodeCallback
 import com.journeyapps.barcodescanner.BarcodeView
 import com.journeyapps.barcodescanner.DefaultDecoderFactory
+import androidx.compose.ui.res.stringResource
+import com.tecnomanu.pasala.R
 import com.tecnomanu.pasala.core.Live
 import com.tecnomanu.pasala.core.Pairing
 import com.tecnomanu.pasala.data.QrPayload
@@ -96,6 +98,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AddDeviceScreen(startOnScan: Boolean, onDone: () -> Unit) {
     val c = P.c
+    val context = LocalContext.current
     var scan by remember { mutableStateOf(startOnScan) }
     var pairedName by remember { mutableStateOf<String?>(null) }
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -103,7 +106,7 @@ fun AddDeviceScreen(startOnScan: Boolean, onDone: () -> Unit) {
 
     // Someone scanned our code (or we scanned theirs): celebrate.
     LaunchedEffect(Unit) {
-        Live.paired.collect { id -> pairedName = Store.peer(id)?.displayName ?: "tu dispositivo" }
+        Live.paired.collect { id -> pairedName = Store.peer(id)?.displayName ?: context.getString(R.string.your_device) }
     }
 
     Backdrop {
@@ -111,10 +114,10 @@ fun AddDeviceScreen(startOnScan: Boolean, onDone: () -> Unit) {
             Modifier.fillMaxSize().verticalScroll(rememberScrollState())
                 .padding(start = 20.dp, end = 20.dp, top = top + 8.dp, bottom = bottom + 24.dp),
         ) {
-            IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Volver", tint = c.text) }
-            Text("Sumar dispositivo", style = MaterialTheme.typography.displaySmall, color = c.text, modifier = Modifier.padding(start = 4.dp, top = 6.dp))
+            IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back), tint = c.text) }
+            Text(stringResource(R.string.add_title), style = MaterialTheme.typography.displaySmall, color = c.text, modifier = Modifier.padding(start = 4.dp, top = 6.dp))
             Text(
-                "Uno muestra el código y el otro lo escanea. Da igual cuál: después se pueden pasar cosas para los dos lados.",
+                stringResource(R.string.add_body),
                 style = MaterialTheme.typography.bodyMedium, color = c.muted, modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 20.dp),
             )
 
@@ -140,7 +143,7 @@ private fun Segmented(scan: Boolean, onChange: (Boolean) -> Unit) {
         Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(c.surface)
             .border(1.dp, c.outline, RoundedCornerShape(50)).padding(5.dp),
     ) {
-        listOf(false to "Mostrar mi código", true to "Escanear código").forEach { (value, label) ->
+        listOf(false to stringResource(R.string.tab_show), true to stringResource(R.string.tab_scan)).forEach { (value, label) ->
             val sel = scan == value
             Box(
                 Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(50))
@@ -169,7 +172,9 @@ private fun ShowCodeTab() {
     val code by Pairing.current.collectAsState()
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
-    DisposableEffect(Unit) {
+    val port by Live.port.collectAsState()
+    // A code made before the listener was up would carry the default port; remake it once the real one is known.
+    DisposableEffect(port) {
         Pairing.newCode()
         onDispose { Pairing.clear() }
     }
@@ -194,7 +199,7 @@ private fun ShowCodeTab() {
                 contentAlignment = Alignment.Center,
             ) {
                 if (bmp != null) {
-                    Image(bmp, "Código para sumar este teléfono", Modifier.fillMaxSize())
+                    Image(bmp, stringResource(R.string.cd_qr), Modifier.fillMaxSize())
                     Box(Modifier.size(58.dp).clip(RoundedCornerShape(18.dp)).background(Color.White).padding(5.dp)) {
                         BrandMark(48.dp, 14.dp)
                     }
@@ -207,12 +212,12 @@ private fun ShowCodeTab() {
             style = MaterialTheme.typography.titleLarge, color = c.text, modifier = Modifier.padding(top = 22.dp),
         )
         Text(
-            "Escaneálo desde la Mac o desde otro teléfono con Pasala.",
+            stringResource(R.string.show_hint),
             style = MaterialTheme.typography.bodyMedium, color = c.muted, textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 4.dp, start = 12.dp, end = 12.dp),
         )
         Text(
-            "Se renueva en %d:%02d · sirve una sola vez".format(left / 60, left % 60),
+            stringResource(R.string.show_expiry, (left / 60).toInt(), (left % 60).toInt()),
             style = MaterialTheme.typography.bodySmall, color = c.faint, modifier = Modifier.padding(top = 14.dp),
         )
     }
@@ -238,9 +243,9 @@ private fun ScanTab() {
         scope.launch {
             status = when (Pairing.pairWith(qr)) {
                 is Pairing.Result.Ok -> PairStatus.Idle // success screen comes from Live.paired
-                Pairing.Result.Expired -> PairStatus.Error("Ese código ya se usó o venció. Mostrá uno nuevo en el otro dispositivo y volvé a escanear.")
-                Pairing.Result.Unreachable -> PairStatus.Error("No pudimos llegar a ${qr.name}. Fijate que estén en la misma red Wi-Fi o con Tailscale prendido.")
-                Pairing.Result.Self -> PairStatus.Error("Ese es el código de este mismo teléfono.")
+                Pairing.Result.Expired -> PairStatus.Error(context.getString(R.string.err_expired))
+                Pairing.Result.Unreachable -> PairStatus.Error(context.getString(R.string.err_unreachable, qr.name))
+                Pairing.Result.Self -> PairStatus.Error(context.getString(R.string.err_self))
             }
         }
     }
@@ -261,16 +266,16 @@ private fun ScanTab() {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(28.dp)) {
                     Icon(Icons.Rounded.PhotoCamera, null, tint = Color.White, modifier = Modifier.size(36.dp))
                     Text(
-                        "Para escanear necesitamos usar la cámara.",
+                        stringResource(R.string.camera_needed),
                         style = MaterialTheme.typography.bodyMedium, color = Color.White, textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 10.dp, bottom = 16.dp),
                     )
-                    GradientButton("Permitir cámara", Modifier.fillMaxWidth(0.8f)) { ask.launch(Manifest.permission.CAMERA) }
+                    GradientButton(stringResource(R.string.allow_camera), Modifier.fillMaxWidth(0.8f)) { ask.launch(Manifest.permission.CAMERA) }
                 }
             } else {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = Orange)
-                    Text("Conectando con ${found?.name}…", style = MaterialTheme.typography.titleMedium, color = Color.White, modifier = Modifier.padding(top = 16.dp))
+                    Text(stringResource(R.string.connecting, found?.name.orEmpty()), style = MaterialTheme.typography.titleMedium, color = Color.White, modifier = Modifier.padding(top = 16.dp))
                 }
             }
         }
@@ -280,10 +285,10 @@ private fun ScanTab() {
                     Icon(Icons.Rounded.ErrorOutline, null, tint = c.danger, modifier = Modifier.size(20.dp))
                     Text(s.message, style = MaterialTheme.typography.bodyMedium, color = c.text, modifier = Modifier.padding(start = 8.dp))
                 }
-                SoftButton("Escanear de nuevo", Modifier.padding(top = 14.dp)) { found = null; status = PairStatus.Idle }
+                SoftButton(stringResource(R.string.scan_again), Modifier.padding(top = 14.dp)) { found = null; status = PairStatus.Idle }
             }
             else -> Text(
-                "Apuntá al código que muestra Pasala en el otro dispositivo.",
+                stringResource(R.string.scan_hint),
                 style = MaterialTheme.typography.bodyMedium, color = c.muted, textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 18.dp, start = 12.dp, end = 12.dp),
             )
@@ -337,16 +342,16 @@ private fun PairedSuccess(name: String, onDone: () -> Unit, onAnother: () -> Uni
                 Icon(Icons.Rounded.Check, null, tint = Color(0xFF0E0F1A), modifier = Modifier.size(46.dp))
             }
         }
-        Text("¡Listo!", style = MaterialTheme.typography.displaySmall, color = c.text, modifier = Modifier.padding(top = 26.dp))
+        Text(stringResource(R.string.paired_title), style = MaterialTheme.typography.displaySmall, color = c.text, modifier = Modifier.padding(top = 26.dp))
         Text(
-            "Ya podés pasarte archivos con $name, para los dos lados.",
+            stringResource(R.string.paired_body, name),
             style = MaterialTheme.typography.bodyLarge, color = c.muted, textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 8.dp, start = 16.dp, end = 16.dp),
         )
         Spacer(Modifier.height(32.dp))
-        GradientButton("Listo", Modifier.fillMaxWidth(), onClick = onDone)
+        GradientButton(stringResource(R.string.action_done), Modifier.fillMaxWidth(), onClick = onDone)
         Spacer(Modifier.height(12.dp))
-        SoftButton("Sumar otro", Modifier.fillMaxWidth(), onClick = onAnother)
+        SoftButton(stringResource(R.string.add_another), Modifier.fillMaxWidth(), onClick = onAnother)
     }
 }
 
@@ -357,30 +362,30 @@ fun DeepLinkPairDialog(qr: QrPayload, onDismiss: () -> Unit) {
     var working by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<Pairing.Result?>(null) }
     val title = when (result) {
-        null -> "¿Vincular con ${qr.name}?"
-        is Pairing.Result.Ok -> "¡Listo!"
-        Pairing.Result.Expired -> "Ese código ya no sirve"
-        Pairing.Result.Unreachable -> "No pudimos llegar a ${qr.name}"
-        Pairing.Result.Self -> "Es este mismo teléfono"
+        null -> stringResource(R.string.link_title, qr.name)
+        is Pairing.Result.Ok -> stringResource(R.string.paired_title)
+        Pairing.Result.Expired -> stringResource(R.string.link_expired_title)
+        Pairing.Result.Unreachable -> stringResource(R.string.link_unreach_title, qr.name)
+        Pairing.Result.Self -> stringResource(R.string.link_self_title)
     }
     val body = when (result) {
-        null -> "Después se van a poder pasar archivos para los dos lados."
-        is Pairing.Result.Ok -> "Ya podés pasarte archivos con ${qr.name}."
-        Pairing.Result.Expired -> "Se usó o venció. Mostrá uno nuevo en ${qr.name} y volvé a escanearlo."
-        Pairing.Result.Unreachable -> "Fijate que estén en la misma red Wi-Fi o con Tailscale prendido."
-        Pairing.Result.Self -> "Escaneá el código del otro dispositivo."
+        null -> stringResource(R.string.link_body)
+        is Pairing.Result.Ok -> stringResource(R.string.link_ok_body, qr.name)
+        Pairing.Result.Expired -> stringResource(R.string.link_expired_body, qr.name)
+        Pairing.Result.Unreachable -> stringResource(R.string.link_unreach_body)
+        Pairing.Result.Self -> stringResource(R.string.link_self_body)
     }
     PasalaDialog(title = title, body = body, onDismiss = { if (!working) onDismiss() }) {
         if (result == null) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                SoftButton("Cancelar", Modifier.weight(1f)) { if (!working) onDismiss() }
-                GradientButton("Vincular", Modifier.weight(1f), loading = working) {
+                SoftButton(stringResource(R.string.action_cancel), Modifier.weight(1f)) { if (!working) onDismiss() }
+                GradientButton(stringResource(R.string.action_link), Modifier.weight(1f), loading = working) {
                     working = true
                     scope.launch { result = Pairing.pairWith(qr); working = false }
                 }
             }
         } else {
-            GradientButton(if (result is Pairing.Result.Ok) "Genial" else "Cerrar", Modifier.fillMaxWidth(), onClick = onDismiss)
+            GradientButton(stringResource(if (result is Pairing.Result.Ok) R.string.action_great else R.string.action_close), Modifier.fillMaxWidth(), onClick = onDismiss)
         }
     }
 }

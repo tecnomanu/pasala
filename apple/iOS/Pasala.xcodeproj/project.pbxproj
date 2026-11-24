@@ -1,0 +1,396 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+		BB0000000000000000000001 = {isa = PBXBuildFile; fileRef = AF0000000000000000000002; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		BB0000000000000000000002 = {isa = PBXBuildFile; productRef = BD0000000000000000000001; };
+		BB0000000000000000000003 = {isa = PBXBuildFile; productRef = BD0000000000000000000002; };
+		BF0000000000000000000001 = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000001;
+			proxyType = 1;
+			remoteGlobalIDString = AE0000000000000000000002;
+			remoteInfo = PasalaShare;
+		};
+		BA0000000000000000000004 = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			name = "Embed Foundation Extensions";
+			files = (
+				BB0000000000000000000001,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AF0000000000000000000001 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pasala.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AF0000000000000000000002 = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PasalaShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		AD0000000000000000000001 = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				Pasala.entitlements,
+			);
+			target = AE0000000000000000000001;
+		};
+		AD0000000000000000000002 = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				PasalaShare.entitlements,
+			);
+			target = AE0000000000000000000002;
+		};
+		AC0000000000000000000001 /* App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				AD0000000000000000000001,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		AC0000000000000000000002 /* Share */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				AD0000000000000000000002,
+			);
+			path = Share;
+			sourceTree = "<group>";
+		};
+		AC0000000000000000000004 /* Localization */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ../Localization;
+			sourceTree = "<group>";
+		};
+		AC0000000000000000000003 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		BA0000000000000000000002 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB0000000000000000000002,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BA0000000000000000000006 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB0000000000000000000003,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB0000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				AC0000000000000000000001,
+				AC0000000000000000000003,
+				AC0000000000000000000002,
+				AC0000000000000000000004,
+				AB0000000000000000000002,
+			);
+			sourceTree = "<group>";
+		};
+		AB0000000000000000000002 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AF0000000000000000000001,
+				AF0000000000000000000002,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AE0000000000000000000001 /* PasalaPhone */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CA0000000000000000000002;
+			buildPhases = (
+				BA0000000000000000000001,
+				BA0000000000000000000002,
+				BA0000000000000000000003,
+				BA0000000000000000000004,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BE0000000000000000000001,
+			);
+			fileSystemSynchronizedGroups = (
+				AC0000000000000000000001,
+				AC0000000000000000000003,
+				AC0000000000000000000004,
+			);
+			name = PasalaPhone;
+			packageProductDependencies = (
+				BD0000000000000000000001,
+			);
+			productName = PasalaPhone;
+			productReference = AF0000000000000000000001;
+			productType = "com.apple.product-type.application";
+		};
+		AE0000000000000000000002 /* PasalaShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CA0000000000000000000003;
+			buildPhases = (
+				BA0000000000000000000005,
+				BA0000000000000000000006,
+				BA0000000000000000000007,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AC0000000000000000000002,
+				AC0000000000000000000003,
+				AC0000000000000000000004,
+			);
+			name = PasalaShare;
+			packageProductDependencies = (
+				BD0000000000000000000002,
+			);
+			productName = PasalaShare;
+			productReference = AF0000000000000000000002;
+			productType = "com.apple.product-type.app-extension";
+		};
+		AA0000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					AE0000000000000000000001 = { CreatedOnToolsVersion = 27.0; };
+					AE0000000000000000000002 = { CreatedOnToolsVersion = 27.0; };
+				};
+			};
+			buildConfigurationList = CA0000000000000000000001;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				es,
+				Base,
+			);
+			mainGroup = AB0000000000000000000001;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BC0000000000000000000001,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = AB0000000000000000000002;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AE0000000000000000000001,
+				AE0000000000000000000002,
+			);
+		};
+		BA0000000000000000000003 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BA0000000000000000000007 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BA0000000000000000000001 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BA0000000000000000000005 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BE0000000000000000000001 = {
+			isa = PBXTargetDependency;
+			target = AE0000000000000000000002;
+			targetProxy = BF0000000000000000000001;
+		};
+		CB0000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		CB0000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		CB0000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/Pasala.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Pasala;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tecnomanu.pasala;
+				PRODUCT_NAME = Pasala;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CB0000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/Pasala.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Pasala;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tecnomanu.pasala;
+				PRODUCT_NAME = Pasala;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		CB0000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Share/PasalaShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Share/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Pasala;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tecnomanu.pasala.share;
+				PRODUCT_NAME = PasalaShare;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CB0000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Share/PasalaShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Share/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Pasala;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tecnomanu.pasala.share;
+				PRODUCT_NAME = PasalaShare;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		CA0000000000000000000001 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CB0000000000000000000001,
+				CB0000000000000000000002,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CA0000000000000000000002 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CB0000000000000000000003,
+				CB0000000000000000000004,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CA0000000000000000000003 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CB0000000000000000000005,
+				CB0000000000000000000006,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BC0000000000000000000001 = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ..;
+		};
+		BD0000000000000000000001 = {
+			isa = XCSwiftPackageProductDependency;
+			package = BC0000000000000000000001;
+			productName = PasalaKit;
+		};
+		BD0000000000000000000002 = {
+			isa = XCSwiftPackageProductDependency;
+			package = BC0000000000000000000001;
+			productName = PasalaKit;
+		};
+	};
+	rootObject = AA0000000000000000000001 /* Project object */;
+}
