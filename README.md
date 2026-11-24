@@ -8,6 +8,9 @@ o por [Tailscale](https://tailscale.com) desde afuera. Sin nube, sin cuentas, si
 
 *Share files between your own Mac and Android devices, peer-to-peer over LAN or Tailscale. Pair once with a QR code. No cloud, no accounts, no telemetry. Includes an MCP server so AI agents can see what arrived.*
 
+<p align="center"><img src="docs/media/pasala-demo.gif" width="720" alt="Demo: el Android le pasa tres fotos a la Mac, llegan a la isla y una se abre; después un archivo arrastrado desde el Finder a la isla llega al Android y se abre ahí"></p>
+<p align="center"><a href="docs/media/pasala-demo.mp4">Ver el demo en video (MP4)</a></p>
+
 ## Qué hace
 
 **Mac** — app de barra de menú con una isla arriba al centro (estilo notch):
