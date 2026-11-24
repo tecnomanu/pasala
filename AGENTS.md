@@ -20,6 +20,8 @@ Hay **dos códigos**: Apple (Swift; Mac e iPhone comparten `PasalaCore` + `Pasal
 Linux comparten `kotlin/shared`). Entre los dos, lo único compartido es `docs/PROTOCOL.md`. Ver
 [D-009](docs/engineering/DECISIONS.md#d-009) y [D-010](docs/engineering/DECISIONS.md#d-010).
 
+Para instalar Pasala en los dispositivos de alguien (pasos para agentes): [`AGENT_INSTALL.md`](AGENT_INSTALL.md).
+
 Docs de ingeniería: [perfil](docs/engineering/GUARDRAILS_PROFILE.md) ·
 [mapa del sistema](docs/engineering/SYSTEM_MAP.md) · [decisiones](docs/engineering/DECISIONS.md) ·
 [historia](docs/engineering/HISTORY.md) · [pruebas](docs/engineering/TESTING.md) ·
