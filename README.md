@@ -1,38 +1,52 @@
-<p align="center"><img src="docs/brand/pasala-icon.svg" width="112" alt="Pasala"></p>
+<p align="center"><img src="docs/brand/pasala-banner.png" width="720" alt="Pasala: Mac, iPhone y Android"></p>
 
-# Pasala
+<p align="center"><b>Español</b> · <a href="README.en.md">English</a> · <a href="README.de.md">Deutsch</a></p>
 
-Pasá archivos entre tus dispositivos: del celu a la Mac, de la Mac al celu, de un Android a otro.
-Se vinculan una vez escaneando un QR y después cualquiera le manda a cualquiera, por el Wi-Fi de casa
-o por [Tailscale](https://tailscale.com) desde afuera. Sin nube, sin cuentas, sin telemetría.
-
-*Share files between your own Mac and Android devices, peer-to-peer over LAN or Tailscale. Pair once with a QR code. No cloud, no accounts, no telemetry. Includes an MCP server so AI agents can see what arrived.*
+<p align="center">
+Pasá archivos entre tu Mac, tu iPhone y tu Android, en cualquier dirección.<br>
+Por el Wi-Fi de casa o por Tailscale. Sin nube, sin cuentas, sin telemetría.
+</p>
 
 <p align="center"><img src="docs/media/pasala-demo.gif" width="720" alt="Demo: el Android le pasa tres fotos a la Mac, llegan a la isla y una se abre; después un archivo arrastrado desde el Finder a la isla llega al Android y se abre ahí"></p>
-<p align="center"><a href="docs/media/pasala-demo.mp4">Ver el demo en video (MP4)</a></p>
+<p align="center"><a href="docs/media/pasala-demo.mp4">Ver el video (MP4)</a></p>
 
 ## Qué hace
 
-**Mac** — app de barra de menú con una isla arriba al centro (estilo notch):
+Los dispositivos se vinculan una vez escaneando un QR y después cualquiera le manda a cualquiera, por la red
+de casa o por [Tailscale](https://tailscale.com) desde afuera. Las apps están en español o inglés según el idioma del sistema.
+
+**Mac**: app de barra de menú con una isla arriba al centro (estilo notch).
 - Pasás el mouse y ves tus dispositivos y lo último que llegó; doble clic abre la ventana.
 - Cuando llegan archivos, la isla se despliega y las miniaturas caen adentro con su progreso.
 - Arrastrás archivos hacia la isla y los soltás sobre un dispositivo para mandarlos.
 - Ventana con el mazo de lo recibido y lo enviado, agrupado por día.
 - **Colecciones**: carpetas con nombre que tus otros dispositivos pueden elegir al mandarte algo.
+- **Texto**: seleccioná texto en cualquier app, clic derecho → *Pasar con Pasala*; o clic derecho en la isla →
+  *Enviar texto copiado*. Lo que llega como texto queda listo para copiar, sin pisar tu portapapeles.
+- Mantené apretada la isla y arrastrala para llevarla a otra pantalla (se acuerda dónde la dejaste).
+- Ícono de la barra: un clic abre el menú, doble clic abre la ventana; *Mostrar notch* oculta o muestra la isla.
+- En Finder: clic derecho sobre archivos → *Enviar con Pasala* y elegís a qué dispositivo.
 
-**Android** — aparece en *Compartir* para cualquier archivo:
+**Android**: aparece en *Compartir* para cualquier archivo.
 - Elegís un destino (y una colección si ese destino tiene) y listo.
+- Texto: *Pasar con Pasala* en el menú al seleccionar texto, o *Enviar lo copiado* desde la app o el panel de ajustes rápidos.
 - Recibe en segundo plano; fotos y videos aparecen en la galería (`Pictures/Pasala`, `Movies/Pasala`).
 - Vincula con otro Android o con la Mac: cualquiera de los dos escanea al otro.
 
-**Agentes (MCP)** — `pasala-mcp` deja que Claude u otro agente consulte el índice de lo recibido
+**iPhone**: aparece en *Compartir* igual que en Android.
+- Elegís destino y colección y se manda; también podés elegir fotos, videos o archivos desde la app.
+- Recibe mientras Pasala está abierta; lo que llega queda en Archivos › Pasala y, si querés, en Fotos.
+- Para vincular, escaneás el código con la cámara del iPhone o mostrás el tuyo.
+
+**Agentes (MCP)**: `pasala-mcp` deja que Claude u otro agente consulte el índice de lo recibido
 (qué llegó, de quién, cuándo, dónde quedó), vea una imagen y mande archivos a un dispositivo.
 
 ## Estructura
 
 ```
 docs/PROTOCOL.md     contrato entre apps (QR, rutas, cabeceras, colecciones)
-mac/                 app de Mac (SwiftUI) + pasala-mcp
+apple/               paquete Swift: núcleo compartido + app de Mac + pasala-mcp
+apple/iOS/           app de iPhone + extensión de Compartir (usa el mismo núcleo)
 android/             app Android (Kotlin + Jetpack Compose)
 docs/engineering/    mapa del sistema, decisiones, pruebas, flujo de cambios
 ```
@@ -42,7 +56,7 @@ docs/engineering/    mapa del sistema, decisiones, pruebas, flujo de cambios
 Requiere macOS 14+ y Xcode (o las Command Line Tools con Swift 6).
 
 ```bash
-cd mac && ./build.sh
+cd apple && ./build.sh
 cp -R build/Pasala.app /Applications/ && open /Applications/Pasala.app
 ```
 
@@ -63,8 +77,21 @@ claude mcp add --scope user pasala /Applications/Pasala.app/Contents/MacOS/pasal
 | `pasala_get_file` | metadatos; con `include_content` devuelve la imagen o el texto |
 | `pasala_mark_seen` | marca como vistos |
 | `pasala_devices` | dispositivos, si están conectados, colecciones y carpeta de recibidos |
+| `pasala_send_text` | manda un texto para copiar en otro dispositivo |
 | `pasala_send` | manda archivos de la Mac a un dispositivo (opcional: a una de sus colecciones) |
 | `pasala_pair` | vincula con el link `pasala://pair?d=…` de otro dispositivo |
+
+## iPhone
+
+Requiere Xcode 16+ (iOS 17+).
+
+```bash
+open apple/iOS/Pasala.xcodeproj
+```
+
+Para instalarla en un iPhone, elegí tu equipo de firma en los dos targets (`Pasala` y `PasalaShare`);
+el App Group `group.com.tecnomanu.pasala` lo usan los dos para compartir los dispositivos vinculados.
+El iPhone recibe solo con la app abierta (iOS no deja servidores en segundo plano).
 
 ## Android
 
