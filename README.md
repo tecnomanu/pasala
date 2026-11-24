@@ -2,6 +2,11 @@
 
 <p align="center"><b>Español</b> · <a href="README.en.md">English</a> · <a href="README.de.md">Deutsch</a></p>
 
+> [!TIP]
+> **¿Sos un agente de IA (Claude, Codex, Cursor…)?** Leé [`AGENT_INSTALL.md`](AGENT_INSTALL.md): qué preguntarle a
+> tu usuario y cómo instalar Pasala en su computadora (macOS, Windows, Linux) y en sus celulares (Android por USB
+> o sin cable, iPhone con Xcode), vincularlos y conectarte por MCP.
+
 <p align="center">
 Pasá archivos entre tu Mac, tu iPhone, tu Android y tus compus con Windows o Linux, en cualquier dirección.<br>
 Por el Wi-Fi de casa o por Tailscale. Sin nube, sin cuentas, sin telemetría.

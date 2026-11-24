@@ -2,6 +2,11 @@
 
 <p align="center"><a href="README.md">Español</a> · <b>English</b> · <a href="README.de.md">Deutsch</a></p>
 
+> [!TIP]
+> **Are you an AI agent (Claude, Codex, Cursor…)?** Read [`AGENT_INSTALL.md`](AGENT_INSTALL.md): what to ask your
+> user and how to install Pasala on their computer (macOS, Windows, Linux) and phones (Android by USB or without a
+> cable, iPhone with Xcode), pair them and connect yourself over MCP.
+
 <p align="center">
 Send files between your own Mac, iPhone, Android and Windows or Linux computers, in any direction.<br>
 Over your home Wi-Fi or over Tailscale. No cloud, no accounts, no telemetry.

@@ -2,6 +2,11 @@
 
 <p align="center"><a href="README.md">Español</a> · <a href="README.en.md">English</a> · <b>Deutsch</b></p>
 
+> [!TIP]
+> **Bist du ein KI-Agent (Claude, Codex, Cursor…)?** Lies [`AGENT_INSTALL.md`](AGENT_INSTALL.md): was du deine
+> Nutzerin oder deinen Nutzer fragst und wie du Pasala auf dem Computer (macOS, Windows, Linux) und den Handys
+> (Android per USB oder ohne Kabel, iPhone mit Xcode) installierst, sie koppelst und dich per MCP verbindest.
+
 <p align="center">
 Schick Dateien zwischen deinem Mac, deinem iPhone, deinem Android und deinen Windows- oder Linux-Rechnern hin und her, in jede Richtung.<br>
 Über das WLAN zu Hause oder über Tailscale. Keine Cloud, keine Konten, keine Telemetrie.
