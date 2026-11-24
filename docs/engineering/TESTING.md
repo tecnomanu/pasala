@@ -46,14 +46,14 @@ python3 tools/fake_peer.py --help             # pair / send / serve / unpair
 
 ## Camino real (lo que hay que probar según lo que se tocó)
 
-| Si tocaste… | Probá |
-|---|---|
-| Protocolo | Mac ↔ Android reales, en los dos sentidos, y cada app contra la herramienta de la otra |
-| Vinculación | QR desde los dos lados; link por la cámara; código vencido o usado → error claro |
-| Envío / recepción | Varios archivos, un video grande, nombre repetido (` (1)`), con y sin colección |
-| Segundo plano (Android) | Recibir con la pantalla bloqueada y después de actualizar la app sin abrirla |
-| Isla (Mac) | Pasar el mouse, arrastrar archivos hacia arriba, llegada de archivos, que la barra de menú siga usable |
-| MCP | `pasala_new_files`, `pasala_get_file` con contenido, `pasala_send` a un dispositivo real |
-| Tailscale | Mandar con el otro dispositivo fuera de la LAN |
+| Si tocaste… | Probá | ¿Alcanza el emulador? |
+|---|---|---|
+| Protocolo | Mac ↔ Android reales, en los dos sentidos, y cada app contra la herramienta de la otra | No: dispositivos reales |
+| Vinculación | QR desde los dos lados; link por la cámara; código vencido o usado → error claro | Solo el link por `adb`; la cámara, en uno real |
+| Envío / recepción | Varios archivos, un video grande, nombre repetido (` (1)`), con y sin colección | Sí, con la herramienta de la otra punta; el video grande, en uno real |
+| Segundo plano (Android) | Recibir con la pantalla bloqueada y después de actualizar la app sin abrirla | No: los límites de batería cambian por fabricante |
+| Isla (Mac) | Pasar el mouse, arrastrar archivos hacia arriba, llegada de archivos, que la barra de menú siga usable | — (Mac) |
+| MCP | `pasala_new_files`, `pasala_get_file` con contenido, `pasala_send` a un dispositivo real | — (Mac) |
+| Tailscale | Mandar con el otro dispositivo fuera de la LAN | No |
 
 Lo que no se probó se informa como `UNVERIFIED`.

@@ -1,4 +1,4 @@
-<!-- guardrails-workflow:start v2.2 node-fullstack -->
+<!-- guardrails-workflow:start v2.2 native-apps -->
 <!-- Fixed block. Do not edit; replace it whole to upgrade. Project notes go below the end marker. -->
 
 # Change workflow
@@ -100,14 +100,14 @@ When something breaks in production: find the failing boundary, collect
 evidence first, rank hypotheses, apply the safest mitigation, and fix
 permanently only after the cause is proven.
 
-## Stack checks — Node / TypeScript
+## Stack checks — Native apps (Swift / Kotlin)
 
-- **Plan:** entry point (HTTP, CLI, worker, MCP tool, IPC) → module → state/persistence → side effects. Note which process runs the code and whether it must be restarted.
-- **Implement:** follow the repo's native extension mechanism (adapters, providers, registries) instead of adding a parallel one; keep dependency direction; explicit failure modes, timeouts and retries.
-- **Review:** circular or wrong-direction imports; god modules; runtime state leaking across requests or sessions; duplicated tool execution; stale async state; unsafe filesystem, command or network handling.
-- **Security:** command injection; path traversal; SSRF; IPC/WebSocket/MCP boundaries; prompt or tool injection where model output drives side effects; resource exhaustion.
-- **Runtime proof:** the running process actually loaded the new code; the changed path actually executed (request, command, tool call) with output as evidence.
-- **Release:** process restarts and daemons; published package contents; config and env; data/schema migrations; backward compatibility for clients and plugins.
+- **Plan:** name the platform touched (Apple, Android or both) and the process that runs the code (app, extension, background service, helper binary). When apps share a wire protocol or file format, the contract document changes first and every side changes in the same change: new fields optional, breaking changes bump the version.
+- **Implement:** go through the repo's single owner of state (engine, store, repository, ViewModel) instead of adding a second writer; no disk, network or database I/O on the main actor or main dispatcher; stream large files and `content://` URIs instead of loading them whole; Android writes shared media through MediaStore (pending, then published) or the Storage Access Framework, never raw paths; permissions, foreground service types, entitlements and `Info.plist` usage strings land in the same change as the code that needs them.
+- **Review:** main-thread blocking and state crossing actors or dispatchers unsafely; lifecycle assumptions (process death, configuration change, app in background, service killed or not restarted); exported components and intent filters wider than needed; deep links and share intents used without validation; a second source of truth beside the canonical store; stored-data changes without an additive migration.
+- **Security:** anything from a deep link, share intent, IPC, local server or peer is untrusted (file names, paths, MIME types, sizes); writes stay inside the app's or the destination folder; secrets in Keychain/Keystore or app-private storage, never in plists, exported prefs or logs; cleartext and ATS exceptions justified; only the entitlements and permissions the feature uses.
+- **Runtime proof:** the build running is the one just made (Swift Package `swift build`, Xcode scheme or `xcodebuild`, the packaged `.app`, `adb install -r`; one instance only). Exercise the changed path on a target: `adb shell am start` for deep links and share intents, `adb logcat` as evidence, both sides of a protocol. Say whether it ran on an emulator/simulator or a real device; the emulator does not prove camera, background limits, battery restrictions, Wi-Fi/multicast/discovery or notifications. Ad-hoc signed macOS builds can trigger privacy prompts (Local Network, camera, files) again after every rebuild.
+- **Release:** signing identity, provisioning, hardened runtime, notarization and entitlements (Apple); keystore, `versionCode`, target SDK and store policy for permissions and foreground service types (Android); minimum OS versions; compatibility of stored data and of the wire protocol with versions already installed.
 
 <!-- guardrails-workflow:end -->
 
@@ -115,21 +115,9 @@ permanently only after the cause is proven.
 
 <!-- Only what differs from the fixed block above, per step. Link to TESTING.md, SYSTEM_MAP.md and CONVENTIONS instead of repeating them. Keep it short. -->
 
-There is no `*-guardrails-bootstrap` skill for native Swift/Kotlin yet; the fixed block above comes
-from the Node one. Its "Stack checks — Node / TypeScript" section does not apply here; use this one.
-
-### Stack checks — Swift (Mac) / Kotlin (Android)
-
-- **Plan:** name the side (Mac, Android or both) and whether `docs/PROTOCOL.md` changes. Protocol change → both apps in the same change.
-- **Implement:** Mac behavior goes through `Engine` (single owner of state); Android through `core/` over `data/Store`. UI text follows `AGENTS.md` rule 5.
-- **Review:** main-thread work (Mac `@MainActor`, Android main dispatcher) doing I/O; whole files loaded in memory; received names not sanitized; a second place that writes the database or the store.
-- **Security:** every `/v1/*` route authenticates the peer before reading the body; `/local/*` loopback + token; file writes stay inside the destination folder; MCP tools with side effects go through the app.
-- **Runtime proof:** the rebuilt `.app` / reinstalled APK is the one running (single instance on Mac; `adb install -r`), and the changed path ran against the other side (real device, `smoke.py` or `fake_peer.py`). See [TESTING.md](TESTING.md).
-- **Release:** no store or CI yet. A protocol change needs both apps updated on the owner's devices; schema changes are additive migrations.
-
-### Per step
-
-- **Plan / Architecture:** [SYSTEM_MAP.md](SYSTEM_MAP.md), [DECISIONS.md](DECISIONS.md).
-- **Implement:** long whys go to [HISTORY.md](HISTORY.md) with an anchor.
-- **Review:** scan the diff for personal data (names, real IPs, device serials, local paths, emails) before committing; this repo is public.
-- **Test:** [TESTING.md](TESTING.md), "Camino real" table.
+- **Plan:** the contract is [`docs/PROTOCOL.md`](../PROTOCOL.md); the two apps share no code. Name the side (Mac, Android or both). [SYSTEM_MAP.md](SYSTEM_MAP.md), [DECISIONS.md](DECISIONS.md).
+- **Implement:** Mac behavior goes through `Engine` (single owner of state); Android through `core/` over `data/Store`. `pasala-mcp` only reads the database; anything that sends or pairs goes through the app's `/local/*`. `Engine` is `@MainActor`, so every `db.*` call runs on the main thread: keep new queries small or move them off it. UI text follows `AGENTS.md` rule 5. Long whys go to [HISTORY.md](HISTORY.md) with an anchor.
+- **Review:** received names go through `uniqueURL` (Mac, `PasalaCore/Net.swift`) and `Receiver.sanitize` (Android); a new write path uses them too. A `pasala://pair` link never pairs on its own: it opens the confirmation dialog. Scan the diff for personal data (names, real IPs, device serials, local paths, emails) before committing; this repo is public.
+- **Security:** every `/v1/*` route authenticates the peer before reading the body; `/v1/pair` is the only exception and depends on the one-time code; `/local/*` is loopback + token; MCP tools with side effects go through the app.
+- **Test / runtime proof:** run the changed path against the other side (real device, `mac/tools/smoke.py` or `android/tools/fake_peer.py`). [TESTING.md](TESTING.md), "Camino real" table.
+- **Release:** no store or CI yet. A protocol change needs both apps updated on the owner's devices; schema changes are additive migrations in `PasalaDB.migrate()`.
