@@ -1,7 +1,8 @@
 package com.tecnomanu.pasala.net
 
-import android.util.Log
+import com.tecnomanu.pasala.core.Log
 import com.tecnomanu.pasala.core.Live
+import com.tecnomanu.pasala.core.Platform
 import com.tecnomanu.pasala.core.Pairing
 import com.tecnomanu.pasala.core.Receiver
 import com.tecnomanu.pasala.data.FileResponse
@@ -25,14 +26,18 @@ import java.io.IOException
 import java.net.URLDecoder
 import java.security.MessageDigest
 
-/** Protocol routes (docs/PROTOCOL.md § Rutas). */
-class PasalaServer {
+/**
+ * Protocol routes (docs/PROTOCOL.md § Rutas). [local] handles the app's own `/local/...` routes
+ * (desktop only; it checks loopback + its token itself) and returns null for anything else.
+ */
+class PasalaServer(private val local: ((HttpRequest) -> HttpResponse?)? = null) {
     private val http = MiniHttpServer(::route)
 
     fun start(): Int = http.start(Live.DEFAULT_PORT).also { Live.setPort(it) }
     fun stop() { http.stop(); Live.setPort(0) }
 
     private fun route(req: HttpRequest): HttpResponse {
+        if (req.path.startsWith("/local/")) return local?.invoke(req) ?: HttpResponse.error(404, "not_found")
         if (req.method != "POST") return HttpResponse.error(405, "method_not_allowed")
         return try {
             when (req.path) {
@@ -65,7 +70,7 @@ class PasalaServer {
 
     private fun me(): HelloResponse {
         val id = Store.identity
-        return HelloResponse(id.id, id.name, "android", Live.advertisedPort, Addresses.local().all)
+        return HelloResponse(id.id, id.name, Platform.name, Live.advertisedPort, Addresses.local().all, Receiver.collections())
     }
 
     private fun pair(req: HttpRequest): HttpResponse {

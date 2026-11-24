@@ -14,3 +14,8 @@ android/tools/.fake_peer.json
 android/tools/received/
 *.keystore
 *.jks
+desktop/build/
+desktop/app/build/
+desktop/.gradle/
+desktop/.kotlin/
+kotlin/shared/build/

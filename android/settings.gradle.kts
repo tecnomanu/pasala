@@ -33,3 +33,6 @@ plugins {
 rootProject.name = "Pasala"
 
 include(":app")
+// Protocol core shared with desktop/ (docs/engineering/DECISIONS.md#d-010).
+include(":shared")
+project(":shared").projectDir = file("../kotlin/shared")

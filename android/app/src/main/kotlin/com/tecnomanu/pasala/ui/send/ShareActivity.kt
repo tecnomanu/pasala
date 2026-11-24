@@ -26,8 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.ui.res.stringResource
 import com.tecnomanu.pasala.R
+import com.tecnomanu.pasala.core.AndroidPlatform
 import com.tecnomanu.pasala.core.Outgoing
-import com.tecnomanu.pasala.core.Sender
 import com.tecnomanu.pasala.net.Resolver
 import com.tecnomanu.pasala.service.PasalaService
 import com.tecnomanu.pasala.ui.MainActivity
@@ -56,7 +56,7 @@ class ShareActivity : ComponentActivity() {
     private fun describePicked() {
         val uris = picked
         lifecycleScope.launch {
-            files = withContext(Dispatchers.IO) { uris.mapNotNull { Sender.describe(this@ShareActivity, it) } }
+            files = withContext(Dispatchers.IO) { uris.mapNotNull { AndroidPlatform.describe(this@ShareActivity, it) } }
         }
     }
 
@@ -133,7 +133,7 @@ class ShareActivity : ComponentActivity() {
         }
         val type = intent.type
         lifecycleScope.launch {
-            files = withContext(Dispatchers.IO) { uris.mapNotNull { Sender.describe(this@ShareActivity, it, type) } }
+            files = withContext(Dispatchers.IO) { uris.mapNotNull { AndroidPlatform.describe(this@ShareActivity, it, type) } }
         }
     }
 

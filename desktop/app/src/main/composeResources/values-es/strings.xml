@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="send_files_ellipsis">Enviar archivos…</string>
+    <string name="send_copied_text">Enviar texto copiado</string>
+    <string name="send_to">Enviar a</string>
+    <string name="show_island">Mostrar isla</string>
+    <string name="open_pasala">Abrir Pasala</string>
+    <string name="open_received_folder">Abrir carpeta de recibidos</string>
+    <string name="add_device_ellipsis">Sumar dispositivo…</string>
+    <string name="settings_ellipsis">Ajustes…</string>
+    <string name="quit">Salir de Pasala</string>
+    <string name="send_with_pasala">Enviar con Pasala</string>
+
+    <string name="island_text_ready">Texto listo para copiar</string>
+    <plurals name="island_devices_connected">
+        <item quantity="one">%1$d dispositivo conectado</item>
+        <item quantity="other">%1$d dispositivos conectados</item>
+    </plurals>
+    <string name="arrived_one_photo">Llegó una foto</string>
+    <string name="arrived_one_video">Llegó un video</string>
+    <string name="arrived_one_file">Llegó un archivo</string>
+    <plurals name="arrived_photos">
+        <item quantity="one">Llegó %1$d foto</item>
+        <item quantity="other">Llegaron %1$d fotos</item>
+    </plurals>
+    <plurals name="arrived_videos">
+        <item quantity="one">Llegó %1$d video</item>
+        <item quantity="other">Llegaron %1$d videos</item>
+    </plurals>
+    <plurals name="arrived_files">
+        <item quantity="one">Llegó %1$d archivo</item>
+        <item quantity="other">Llegaron %1$d archivos</item>
+    </plurals>
+    <string name="island_no_devices">Sin dispositivos todavía</string>
+    <string name="island_hint">Arrastrá archivos acá · doble clic abre Pasala</string>
+    <string name="island_add_hint">Sumá uno con el botón de abajo.</string>
+    <string name="island_latest">Lo último que llegó</string>
+    <string name="island_latest_empty">Lo que te manden va a aparecer acá.</string>
+    <string name="clear">Limpiar</string>
+    <string name="send_files">Enviar archivos</string>
+    <string name="open_folder">Abrir carpeta</string>
+    <string name="add_short">Sumar</string>
+    <string name="devices">Dispositivos</string>
+    <string name="arriving_from">Llegando de %1$s</string>
+    <string name="sending_to">Mandando a %1$s</string>
+    <string name="phase_connecting">Conectando…</string>
+    <string name="phase_waiting">Esperando que acepte…</string>
+    <string name="island_sent_done">Listo, ya lo tiene %1$s.</string>
+    <string name="island_send_failed">Algunos archivos no llegaron. Probá de nuevo.</string>
+    <string name="island_declined">%1$s dijo que no esta vez.</string>
+    <string name="island_unreachable">No pude llegar a %1$s. Fijate que esté prendido y en la misma red.</string>
+    <string name="text_too_large">Ese texto es demasiado largo para mandarlo (hasta 1 MB).</string>
+    <string name="island_arrived_from">De %1$s</string>
+    <string name="drop_on_device">Soltalo en un dispositivo</string>
+    <plurals name="offer_title">
+        <item quantity="one">%1$s te quiere mandar un archivo</item>
+        <item quantity="other">%1$s te quiere mandar %2$d archivos</item>
+    </plurals>
+    <string name="decline">Rechazar</string>
+    <string name="accept">Aceptar</string>
+    <string name="paired_title">¡Vinculado!</string>
+    <string name="paired_body">Ya podés pasarle archivos a %1$s.</string>
+    <string name="send_text_to">Mandar texto a…</string>
+    <string name="from_device">De %1$s</string>
+    <string name="to_device">A %1$s</string>
+    <string name="copy">Copiar</string>
+    <string name="copied">Copiado</string>
+    <string name="open">Abrir</string>
+
+    <plurals name="files_count">
+        <item quantity="one">%1$d archivo</item>
+        <item quantity="other">%1$d archivos</item>
+    </plurals>
+    <string name="notify_offer_title">%1$s te quiere mandar algo</string>
+    <string name="notify_offer_body">Aceptalo o rechazalo en la isla de arriba de la pantalla.</string>
+    <string name="no_copied_text">Primero copiá un texto y probá de nuevo.</string>
+
+    <string name="main_no_devices">Escaneá el código con tu celular para empezar.</string>
+    <string name="connected">Conectado</string>
+    <string name="just_now">recién</string>
+    <string name="seen_ago">Visto hace %1$s</string>
+    <string name="not_connected">Sin conexión</string>
+    <string name="unpair">Desvincular</string>
+    <string name="unpair_title">¿Desvincular %1$s? No van a poder pasarse archivos hasta que se vuelvan a vincular.</string>
+    <string name="cancel">Cancelar</string>
+    <string name="add_device">Sumar dispositivo</string>
+    <string name="collections">Colecciones</string>
+    <string name="collections_hint">Carpetas con nombre que tus dispositivos pueden elegir al mandarte algo.</string>
+    <string name="add_collection">Sumar una carpeta…</string>
+    <string name="what_arrived">Lo que llegó</string>
+    <string name="what_you_sent">Lo que mandaste</string>
+    <string name="received">Recibido</string>
+    <string name="sent">Enviado</string>
+    <string name="empty_title">Todavía no llegó nada</string>
+    <string name="empty_body">Compartí algo desde el celular y elegí Pasala. Lo vas a ver caer acá.</string>
+    <string name="empty_pair_title">Vinculá tu celular</string>
+    <string name="empty_pair_body">Abrí Pasala en el celular y escaneá el código de esta compu.</string>
+    <string name="show_code">Mostrar código</string>
+    <string name="save">Guardar</string>
+    <string name="rename">Renombrar</string>
+    <string name="remove">Quitar</string>
+    <string name="show_in_folder">Mostrar en la carpeta</string>
+    <string name="file_gone">Ya no está en la carpeta</string>
+
+    <string name="pair_instructions">Abrí Pasala en el celular, tocá Sumar dispositivo → Escanear y apuntá acá.</string>
+    <string name="code_changes_in">El código cambia en %1$s</string>
+    <string name="copy_my_code">Copiar el código de esta compu</string>
+    <string name="paste_other_code">¿Es otra compu? Pegá acá su código</string>
+    <string name="pair_action">Vincular</string>
+    <string name="err_expired">Ese código ya se usó o venció. Mostrá uno nuevo en el otro dispositivo y probá de nuevo.</string>
+    <string name="err_unreachable">No pude llegar a %1$s. Fijate que estén en la misma red Wi-Fi o con Tailscale prendido.</string>
+    <string name="err_self">Ese es el código de esta misma compu.</string>
+    <string name="err_not_code">Eso no parece un código de Pasala.</string>
+
+    <string name="send">Enviar</string>
+    <string name="pair_first">Primero vinculá un dispositivo.</string>
+    <string name="choose_files">Elegir archivos</string>
+    <string name="drag_files_here">Arrastrá archivos acá</string>
+    <string name="add_more">Sumar más…</string>
+    <string name="to_which_device">¿A qué dispositivo?</string>
+    <string name="which_collection">¿En qué colección?</string>
+    <string name="none">Ninguna</string>
+    <plurals name="send_n">
+        <item quantity="one">Enviar %1$d archivo</item>
+        <item quantity="other">Enviar %1$d archivos</item>
+    </plurals>
+    <string name="sending_progress">Mandando… %1$d%%</string>
+    <string name="close">Cerrar</string>
+    <string name="retry">Probar de nuevo</string>
+
+    <string name="settings">Ajustes</string>
+    <string name="this_computer_name">Nombre de esta compu</string>
+    <string name="where_to_save">Dónde guardo lo que llega</string>
+    <string name="change">Cambiar…</string>
+    <string name="ask_before">Preguntar antes de recibir</string>
+    <string name="ask_before_hint">Cuando un dispositivo te manda algo, primero lo aceptás o lo rechazás.</string>
+    <string name="open_at_login">Abrir al iniciar sesión</string>
+    <string name="shortcut_hint">%1$s manda el texto que copiaste, desde cualquier app.</string>
+    <string name="collections_settings_hint">Cuando un dispositivo te manda algo, elige en cuál dejarlo. Si elige “Ninguna”, va a la carpeta de arriba.</string>
+    <string name="connection_details">Detalles de conexión</string>
+    <string name="addresses">Direcciones: %1$s · puerto %2$d</string>
+</resources>

@@ -282,7 +282,7 @@ private fun FileTile(f: Outgoing, fs: Sender.FileState?, phase: Sender.Phase?) {
     val media = f.mime.startsWith("image/") || f.mime.startsWith("video/")
     Column {
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
-            FileThumb(f.uri, f.mime, f.name, Modifier.fillMaxSize(), corner = 20.dp, showLabel = true)
+            FileThumb(android.net.Uri.parse(f.uri), f.mime, f.name, Modifier.fillMaxSize(), corner = 20.dp, showLabel = true)
             if (fs != null && phase != null) {
                 val sending = !fs.done && !fs.failed && phase == Sender.Phase.Sending
                 if (sending || fs.done || fs.failed) {

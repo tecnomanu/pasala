@@ -11,6 +11,8 @@ Para entender Pasala sin leer todo el código.
 | App iPhone | iPhone | Igual que la Mac pero en pantalla: recibe mientras está abierta ([HISTORY](HISTORY.md#ios-foreground)); guarda en Archivos y, si se quiere, en Fotos |
 | Extensión de Compartir | iPhone, la lanza iOS desde Compartir | Muestra destino y colección y manda; no recibe |
 | App Android | Celular | Pantallas + servicio en primer plano que mantiene el servidor en `:47820` y el anuncio NSD |
+| App de escritorio (`Pasala` / `Pasala.exe`) | Windows y Linux, en la bandeja del sistema | Servidor en `:47820`, isla arriba al centro, ventanas, índice SQLite, atajo Ctrl+Alt+P, "Enviar a" / acciones del gestor de archivos |
+| `Pasala --mcp` | Windows y Linux, lo lanza el cliente MCP (stdio) | Igual que `pasala-mcp`: lee el índice y para mandar/vincular le habla a la app por loopback |
 
 Cada dispositivo es servidor y cliente a la vez. No hay nube ni servidor central.
 
@@ -26,7 +28,7 @@ Resolver dirección de B (última que anduvo → descubierta en la LAN → guard
 2 s) → el `hello` trae las colecciones de B → si hay, la persona elige una →
 `POST /v1/offer` (B acepta solo o pregunta, hasta 60 s) → un `POST /v1/files` por archivo, en streaming →
 B escribe a temporal, mueve al destino (colección / carpeta del peer / carpeta general en Mac;
-MediaStore en Android) y lo registra.
+MediaStore en Android; `~/Downloads/Pasala` o la colección en Windows/Linux) y lo registra.
 
 **Texto** (A → B)
 "Pasar con Pasala" (clic derecho sobre texto en la Mac, menú de texto o Compartir en el celu, botón de pegar) →
@@ -35,9 +37,10 @@ la persona elige el dispositivo → `POST /v1/text` → B lo guarda como "Texto 
 la persona toca Copiar cuando quiere ([HISTORY](HISTORY.md#clipboard-untouched)).
 
 **Agente (MCP)**
-Cliente MCP → `pasala-mcp` (stdio) → lee `pasala.db` (archivos, peers, colecciones; marca "visto por el agente") →
+Cliente MCP → `pasala-mcp` (Mac) o `Pasala --mcp` (Windows/Linux), por stdio → lee `pasala.db` (archivos, peers, colecciones; marca "visto por el agente") →
 para `pasala_send` / `pasala_pair` → `http://127.0.0.1:<puerto>/local/*` de la app con el token de
-`~/Library/Application Support/Pasala/local-token`.
+`local-token` (Mac: `~/Library/Application Support/Pasala/`; Windows: `%APPDATA%\Pasala\`; Linux: `~/.local/share/pasala/`).
+Lo mismo usa una segunda ejecución de la app de escritorio (`/local/open`) para pasarle archivos o "mandar lo copiado".
 
 ## Estado
 
@@ -49,6 +52,10 @@ para `pasala_send` / `pasala_pair` → `http://127.0.0.1:<puerto>/local/*` de la
 | iPhone: `Documents/` | Lo recibido (Archivos › En mi iPhone › Pasala) |
 | Android: `filesDir/pasala.json` | Identidad, peers, ajustes, historial |
 | Android: MediaStore `Pictures|Movies|Download/Pasala` | Lo recibido |
+| Windows/Linux: carpeta de datos `pasala.json` | Identidad, peers, ajustes, historial (mismo formato que Android) |
+| Windows/Linux: carpeta de datos `pasala.db` | `settings`, `files` (índice), `collections`: mismo esquema que la Mac, sin `peers` |
+| Windows/Linux: carpeta de datos `local-token`, `pasala.log` | Token de la ruta local (nuevo en cada arranque); registro local de hasta 1 MB |
+| Windows/Linux: `~/Downloads/Pasala` o la carpeta elegida | Lo recibido |
 
 ## Archivos que vale la pena conocer
 
@@ -58,21 +65,25 @@ para `pasala_send` / `pasala_pair` → `http://127.0.0.1:<puerto>/local/*` de la
 - `apple/Sources/Pasala/Notch.swift` — la isla (estados, tamaños, arrastrar y soltar).
 - `apple/Sources/PasalaMCP/main.swift` — herramientas MCP.
 - `apple/iOS/App/` y `apple/iOS/Share/` — pantallas del iPhone y extensión de Compartir; `apple/iOS/Shared/SendPanel.swift` lo comparten las dos.
-- `android/app/src/main/kotlin/com/tecnomanu/pasala/net/PasalaServer.kt` — rutas del servidor Android.
-- `android/…/core/Sender.kt` y `core/Receiver.kt` — mandar y recibir.
+- `kotlin/shared/…/net/PasalaServer.kt` — rutas del servidor (Android y escritorio).
+- `kotlin/shared/…/core/Sender.kt` y `core/Receiver.kt` — mandar y recibir; cada app pone su `SenderHost` / `ReceiverHost`.
+- `android/…/core/AndroidPlatform.kt` — MediaStore, notificaciones y lectura de `content://` para el núcleo compartido.
+- `desktop/app/…/Desktop.kt` — motor de escritorio (carpetas, índice, colecciones); `ui/Island.kt` la isla; `Mcp.kt` el MCP.
 - `android/…/service/PasalaService.kt` — mantiene vivo el servidor.
 - `android/…/ui/send/SendScreen.kt` — pantalla de compartir (destino, colección, progreso).
 
 ## Costuras frágiles
 
-- **Las dos implementaciones del protocolo** (Swift para Mac + iPhone, Kotlin para Android) pueden divergir: no hay pruebas cruzadas automáticas.
+- **Las dos implementaciones del protocolo** (Swift para Mac + iPhone, Kotlin para Android + Windows + Linux) pueden divergir: no hay pruebas cruzadas automáticas.
   Las herramientas `apple/tools/smoke.py` y `android/tools/fake_peer.py` hacen de "la otra punta".
 - **Permiso de red local en macOS**: firmada ad hoc, cada recompilación puede volver a pedirlo
   ([HISTORY](HISTORY.md#local-network-prompt)).
 - **Segundo plano en Android**: depende del servicio en primer plano y del tipo declarado
   ([HISTORY](HISTORY.md#fgs-type)).
 - **Isla**: es un panel transparente encima de todo; si deja de ignorar el mouse, bloquea la barra de menú
-  ([HISTORY](HISTORY.md#island-mouse)).
+  ([HISTORY](HISTORY.md#island-mouse)). En Windows/Linux es una ventana sin borde, siempre arriba y sin foco;
+  en Linux necesita un compositor para la transparencia.
+- **Núcleo Kotlin compartido**: un cambio en `kotlin/shared` cambia Android y escritorio a la vez; compilar y probar los dos.
 
 ## Qué está forzado y qué es convención
 
@@ -83,4 +94,4 @@ para `pasala_send` / `pasala_pair` → `http://127.0.0.1:<puerto>/local/*` de la
 | Ruta local solo desde loopback | Código |
 | Nombre de archivo saneado, escritura a temporal | Código |
 | Cero datos personales, sin telemetría | Convención + revisión (`AGENTS.md`) |
-| Protocolo igual en las dos apps | Convención + smoke/fake peer |
+| Protocolo igual en los dos códigos | Convención + smoke/fake peer |

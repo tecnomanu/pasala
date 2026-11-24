@@ -1,9 +1,7 @@
 package com.tecnomanu.pasala.data
 
-import android.content.Context
-import android.os.Build
-import android.provider.Settings as AndroidSettings
-import android.util.Log
+import com.tecnomanu.pasala.core.Log
+import com.tecnomanu.pasala.core.Platform
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -40,28 +38,22 @@ object Store {
 
     @Volatile private var initialized = false
 
+    /** Loads [stateFile] (creating the identity on first run, named [defaultName]). */
     @Synchronized
-    fun init(context: Context) {
+    fun init(stateFile: File, defaultName: () -> String) {
         if (initialized) return
-        file = File(context.filesDir, "pasala.json")
+        file = stateFile
         var loaded = runCatching {
             if (file.exists()) PasalaJson.decodeFromString(PersistedState.serializer(), file.readText()) else null
         }.onFailure { Log.w(TAG, "state file unreadable, starting fresh", it) }.getOrNull() ?: PersistedState()
         if (loaded.identity == null) {
-            loaded = loaded.copy(identity = Identity(id = UUID.randomUUID().toString().lowercase(), name = defaultName(context)))
+            loaded = loaded.copy(identity = Identity(id = UUID.randomUUID().toString().lowercase(), name = defaultName(), platform = Platform.name))
         }
         _state.value = loaded
         initialized = true
         persist()
     }
 
-    private fun defaultName(context: Context): String {
-        val n = runCatching { AndroidSettings.Global.getString(context.contentResolver, AndroidSettings.Global.DEVICE_NAME) }.getOrNull()
-        if (!n.isNullOrBlank()) return n
-        val model = Build.MODEL ?: "Android"
-        val maker = Build.MANUFACTURER?.replaceFirstChar { it.uppercase() } ?: ""
-        return if (model.startsWith(maker, ignoreCase = true)) model else "$maker $model".trim()
-    }
 
     val identity: Identity get() = _state.value.identity!!
     val settings: Settings get() = _state.value.settings
@@ -114,11 +106,19 @@ object Store {
 
     fun removePeer(id: String) = mutate { s -> s.copy(peers = s.peers.filterNot { it.id == id }) }
 
-    fun addHistory(item: HistoryItem) = mutate { s ->
+    /** Called after every history entry is added (the desktop app mirrors them into its index). */
+    @Volatile var onHistory: ((HistoryItem) -> Unit)? = null
+
+    fun addHistory(item: HistoryItem) = mutateThen(item) { s ->
         val all = listOf(item) + s.history
         // Texts keep their full body in their own file: drop it with the entry.
-        all.drop(MAX_HISTORY).filter { it.mime == TEXT_MIME }.forEach { File(file.parentFile, "texts/${it.id}.txt").delete() }
+        all.drop(MAX_HISTORY).filter { it.mime == TEXT_MIME }.forEach { runCatching { TextStore.file(it.id).delete() } }
         s.copy(history = all.take(MAX_HISTORY))
+    }
+
+    private fun mutateThen(item: HistoryItem, block: (PersistedState) -> PersistedState) {
+        mutate(block)
+        onHistory?.let { runCatching { it(item) }.onFailure { e -> Log.w(TAG, "history hook failed", e) } }
     }
 
     fun setName(name: String) = mutate { s -> s.copy(identity = s.identity!!.copy(name = name.trim().ifBlank { s.identity.name })) }

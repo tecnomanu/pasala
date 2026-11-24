@@ -13,10 +13,12 @@ import android.util.Log
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.tecnomanu.pasala.core.Live
+import com.tecnomanu.pasala.core.AndroidPlatform
 import com.tecnomanu.pasala.core.Outgoing
 import com.tecnomanu.pasala.core.Sender
 import com.tecnomanu.pasala.net.Addresses
 import com.tecnomanu.pasala.data.Store
+import android.net.Uri
 import com.tecnomanu.pasala.net.Discovery
 import com.tecnomanu.pasala.net.PasalaServer
 import kotlinx.coroutines.Job
@@ -67,9 +69,9 @@ class PasalaService : Service() {
         val peerId = intent.getStringExtra(EXTRA_PEER) ?: return
         val clip = intent.clipData ?: return
         val uris = (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
-        val files = uris.mapNotNull { Sender.describe(this, it) }
+        val files = uris.mapNotNull { AndroidPlatform.describe(this, it) }
         if (files.isEmpty()) return
-        Sender.start(this, jobId, peerId, files, intent.getStringExtra(EXTRA_COLLECTION))
+        Sender.start(jobId, peerId, files, intent.getStringExtra(EXTRA_COLLECTION))
     }
 
     private fun watchNetwork() {
@@ -151,8 +153,8 @@ class PasalaService : Service() {
         /** Hands the files (and their read grant) to the service, which sends them. */
         fun send(context: Context, jobId: String, peerId: String, files: List<Outgoing>, collectionId: String? = null) {
             if (files.isEmpty()) return
-            val clip = ClipData.newRawUri("files", files.first().uri)
-            files.drop(1).forEach { clip.addItem(ClipData.Item(it.uri)) }
+            val clip = ClipData.newRawUri("files", Uri.parse(files.first().uri))
+            files.drop(1).forEach { clip.addItem(ClipData.Item(Uri.parse(it.uri))) }
             val i = Intent(context, PasalaService::class.java)
                 .setAction(ACTION_SEND)
                 .putExtra(EXTRA_JOB, jobId)

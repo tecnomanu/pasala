@@ -1,6 +1,6 @@
 package com.tecnomanu.pasala.net
 
-import android.util.Log
+import com.tecnomanu.pasala.core.Log
 import com.tecnomanu.pasala.core.Live
 import com.tecnomanu.pasala.data.HelloRequest
 import com.tecnomanu.pasala.data.HelloResponse
@@ -55,8 +55,11 @@ object Resolver {
         }
     }
 
-    /** Returns the first route that answers hello, or null. Updates online state. */
-    suspend fun reach(peer: Peer): Route? = withContext(Dispatchers.IO) {
+    /**
+     * Returns the first route that answers hello, or null. Updates online state.
+     * [lastOnly]: background check-ins try only the last address that worked (protocol § "Cada cuánto").
+     */
+    suspend fun reach(peer: Peer, lastOnly: Boolean = false): Route? = withContext(Dispatchers.IO) {
         val all = candidates(peer)
         if (all.isEmpty()) { Live.setOnline(peer.id, false); return@withContext null }
         // The last address that worked usually still works: try it alone first.
@@ -64,6 +67,7 @@ object Resolver {
         if (peer.lastGoodAddr != null) {
             tryHello(peer, first)?.let { remember(peer, first, it); Live.setOnline(peer.id, true); return@withContext first }
         }
+        if (lastOnly && peer.lastGoodAddr != null) { Live.setOnline(peer.id, false); return@withContext null }
         val rest = if (peer.lastGoodAddr != null) all.drop(1) else all
         // Race the rest; blocking calls run detached so a slow loser doesn't hold us up.
         val results = Channel<Pair<Route, HelloResponse?>>(rest.size.coerceAtLeast(1))
@@ -77,10 +81,10 @@ object Resolver {
         winner
     }
 
-    suspend fun refreshAll() = coroutineScope {
+    suspend fun refreshAll(lastOnly: Boolean = false) = coroutineScope {
         Live.setChecking(true)
         try {
-            Store.state.value.peers.map { p -> async { reach(p) } }.awaitAll()
+            Store.state.value.peers.map { p -> async { reach(p, lastOnly) } }.awaitAll()
         } finally {
             Live.setChecking(false)
         }

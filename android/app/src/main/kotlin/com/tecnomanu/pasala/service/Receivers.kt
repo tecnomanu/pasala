@@ -24,7 +24,7 @@ class CopyTextReceiver : BroadcastReceiver() {
         val pending = goAsync()
         com.tecnomanu.pasala.core.Live.appScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val text = com.tecnomanu.pasala.data.TextStore.load(context, item) ?: return@launch
+                val text = com.tecnomanu.pasala.data.TextStore.load(item) ?: return@launch
                 withContext(kotlinx.coroutines.Dispatchers.Main) { com.tecnomanu.pasala.core.Clip.copy(context, text) }
                 Notifications.cancelText(context, item)
             } finally {
