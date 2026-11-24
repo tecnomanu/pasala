@@ -23,9 +23,9 @@ de casa o por [Tailscale](https://tailscale.com) desde afuera. Las apps están e
 - **Colecciones**: carpetas con nombre que tus otros dispositivos pueden elegir al mandarte algo.
 - **Texto**: seleccioná texto en cualquier app, clic derecho → *Pasar con Pasala*; o clic derecho en la isla →
   *Enviar texto copiado*. Lo que llega como texto queda listo para copiar, sin pisar tu portapapeles.
-- Mantené apretada la isla y arrastrala para llevarla a otra pantalla. Se puede ocultar desde el ícono de la
-  barra (*Mostrar notch*); doble clic en el ícono o en la isla abre la ventana.
-- En Finder: clic derecho sobre archivos → *Enviar con Pasala*.
+- Mantené apretada la isla y arrastrala para llevarla a otra pantalla (se acuerda dónde la dejaste).
+- Ícono de la barra: un clic abre el menú, doble clic abre la ventana; *Mostrar notch* oculta o muestra la isla.
+- En Finder: clic derecho sobre archivos → *Enviar con Pasala* y elegís a qué dispositivo.
 
 **Android**: aparece en *Compartir* para cualquier archivo.
 - Elegís un destino (y una colección si ese destino tiene) y listo.

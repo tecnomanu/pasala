@@ -24,9 +24,9 @@ die Namen der Menüpunkte unten sind die englischen.
 - **Sammlungen**: benannte Ordner, die deine anderen Geräte beim Senden auswählen können.
 - **Text**: Text in einer beliebigen App markieren, Rechtsklick → *Send with Pasala*; oder Rechtsklick auf die Insel →
   *Send Copied Text*. Ankommender Text liegt zum Kopieren bereit, ohne deine Zwischenablage zu überschreiben.
-- Die Insel gedrückt halten und ziehen, um sie auf einen anderen Bildschirm zu bringen. Über das Symbol in der
-  Menüleiste lässt sie sich ausblenden (*Show Notch*); ein Doppelklick auf das Symbol oder die Insel öffnet das Fenster.
-- Im Finder: Rechtsklick auf Dateien → *Send with Pasala*.
+- Die Insel gedrückt halten und auf einen anderen Bildschirm ziehen (sie merkt sich, wo du sie gelassen hast).
+- Symbol in der Menüleiste: ein Klick öffnet das Menü, ein Doppelklick das Fenster; *Show Notch* blendet die Insel aus oder ein.
+- Im Finder: Rechtsklick auf Dateien → *Send with Pasala* und das Gerät auswählen.
 
 **Android**: erscheint unter *Teilen* für jede Datei.
 - Ziel auswählen (und eine Sammlung, falls das Ziel welche hat), fertig.

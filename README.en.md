@@ -23,9 +23,9 @@ or from outside over [Tailscale](https://tailscale.com). The apps are in Spanish
 - **Collections**: named folders your other devices can pick when they send you something.
 - **Text**: select text in any app, right-click → *Send with Pasala*; or right-click the island →
   *Send Copied Text*. Text that arrives is ready to copy, without overwriting your clipboard.
-- Press and hold the island, then drag it to move it to another screen. You can hide it from the menu bar
-  icon (*Show Notch*); double-clicking the icon or the island opens the window.
-- In Finder: right-click files → *Send with Pasala*.
+- Press and hold the island, then drag it to another screen (it remembers where you left it).
+- Menu bar icon: one click opens the menu, a double click opens the window; *Show Notch* hides or shows the island.
+- In Finder: right-click files → *Send with Pasala* and pick the device.
 
 **Android**: shows up in *Share* for any file.
 - Pick a device (and a collection, if that device has any) and that's it.
