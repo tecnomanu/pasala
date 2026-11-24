@@ -80,6 +80,7 @@
     <!-- Main window -->
     <string name="main_no_devices">Scan the code with your phone to start.</string>
     <string name="connected">Connected</string>
+    <string name="just_now">just now</string>
     <string name="seen_ago">Seen %1$s ago</string>
     <string name="not_connected">Not connected</string>
     <string name="add_device">Add device</string>

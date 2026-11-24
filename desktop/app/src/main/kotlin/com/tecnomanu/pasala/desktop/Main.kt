@@ -41,6 +41,9 @@ fun main(args: Array<String>) {
     // A copy is already running: hand it the request and leave.
     if (LocalApi.openArgs(files, action)) exitProcess(0)
 
+    setX11ClassName()
+    // File and folder pickers look like the rest of the system (GTK on Linux, Windows dialogs on Windows).
+    runCatching { javax.swing.UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName()) }
     Desktop.setup()
     Desktop.start()
     Ui.islandHidden = Desktop.index.setting("island_hidden") == "1"
@@ -114,5 +117,14 @@ private fun Notices(tray: androidx.compose.ui.window.TrayState) {
             }
             if (!Notify.native(title, body)) tray.sendNotification(Notification(title, body, Notification.Type.Info))
         }
+    }
+}
+
+/** Linux taskbars and docks group windows by WM_CLASS, which AWT otherwise derives from the main class name. */
+private fun setX11ClassName() {
+    if (!Paths.isLinux) return
+    runCatching {
+        val tk = java.awt.Toolkit.getDefaultToolkit()
+        tk.javaClass.getDeclaredField("awtAppClassName").apply { isAccessible = true }.set(tk, "Pasala")
     }
 }

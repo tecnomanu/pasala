@@ -4,9 +4,12 @@ Rige todo lo de [`../AGENTS.md`](../AGENTS.md). Esto es lo propio de la app Andr
 
 - Kotlin + Jetpack Compose (Material 3), minSdk 29, target/compile 36, paquete `com.tecnomanu.pasala`.
   Versiones en `gradle/libs.versions.toml`; JDK 21 para Gradle.
-- Capas (dependencia hacia abajo): `ui/` → `core/` (Pairing, Sender, Receiver) → `net/`
-  (MiniHttpServer, PasalaServer, PasalaClient, Resolver, Discovery, Addresses) → `data/` (Store, Models).
-  `service/` mantiene vivo el servidor (servicio en primer plano tipo `connectedDevice`).
+- Capas (dependencia hacia abajo): `ui/` → `core/` → `net/` → `data/`. El protocolo (Models, Store, TextStore,
+  MiniHttpServer, PasalaServer, PasalaClient, Resolver, Addresses, Pairing, Sender, Receiver, Live) vive en
+  `../kotlin/shared` con los mismos paquetes y lo comparte la app de escritorio ([D-010](../docs/engineering/DECISIONS.md#d-010)).
+  Lo propio de Android lo conecta `core/AndroidPlatform.kt` (MediaStore, notificaciones, `content://`, Radio).
+  Acá quedan Discovery (NSD), Radio, Clip, Format, `service/` (servicio en primer plano tipo `connectedDevice`) y la UI.
+  Un cambio en `kotlin/shared` se compila y prueba también en `desktop/`.
 - `Store` (un JSON en `filesDir`) es la única fuente de identidad, peers, ajustes e historial.
 - Lo recibido va por MediaStore (`Pictures/Pasala`, `Movies/Pasala`, `Download/Pasala`), escrito
   como pendiente y publicado al terminar. Nunca rutas de archivo directas.

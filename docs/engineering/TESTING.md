@@ -67,6 +67,31 @@ python3 tools/fake_peer.py --help             # pair / send / serve / unpair
   `battery reset` al terminar). Ver `HISTORY.md#idle-reachability`.
 - Contra un emulador, `--connect 127.0.0.1:<puerto>` con `adb forward` (el emulador no es alcanzable por su IP).
 
+<a id="windows-y-linux"></a>
+## Windows y Linux
+
+```bash
+cd desktop
+./gradlew :app:compileKotlin                    # compila (en cualquier sistema)
+PASALA_HOME=/tmp/pasala-a PASALA_DEBUG=1 ./gradlew :app:run   # copia aparte; loguea el link de vinculación
+```
+
+- Instaladores: jpackage no cruza sistemas. `.deb` y AppImage en Linux x64 (`./gradlew :app:packageDeb
+  :app:packageAppImage` + `tools/make-appimage.sh`, necesita `binutils` y `fakeroot`); `.msi` en Windows
+  (`gradlew.bat :app:packageMsi`, baja WiX solo).
+- Probar sin máquinas propias: contenedores temporales `lscr.io/linuxserver/webtop:ubuntu-xfce` (escritorio XFCE
+  en el navegador) y `dockurr/windows` (Windows 11 de evaluación). Para que el celular y la Mac los alcancen
+  como a una compu más, darles una IP de la LAN (red `macvlan`; en Windows `DHCP=Y`). Manejar el escritorio
+  Linux con `docker exec -u abc -e DISPLAY=:1 … xdotool` y capturas con `xwd`; Windows por su visor web
+  (`:8006`) o por SSH si se habilitó en `/oem/install.bat`. Borrar contenedores y volúmenes al terminar.
+- Vincular sin cámara: `PASALA_DEBUG=1` escribe el link en la salida; desde la Mac, `pasala_pair` del MCP con ese link;
+  desde la compu, ventana Sumar dispositivo → "¿Es otra compu? Pegá acá su código".
+- Ruta local (lo que usa el MCP y una segunda ejecución): `curl -H "X-Pasala-Local: $(cat <datos>/local-token)"
+  http://127.0.0.1:<puerto>/local/status`; sin el token o desde otra IP tiene que dar `401`.
+- MCP: `printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | Pasala --mcp`
+  (Linux: `/opt/pasala/bin/Pasala --mcp`; Windows: `"%LOCALAPPDATA%\Pasala\Pasala.exe" --mcp`).
+- Isla abierta sin pasar el mouse: `PASALA_ISLAND=open`. Idioma: `LANG=es_AR.UTF-8` (Linux) o el idioma de Windows.
+
 ## Camino real (lo que hay que probar según lo que se tocó)
 
 | Si tocaste… | Probá | ¿Alcanza el emulador? |
@@ -76,7 +101,9 @@ python3 tools/fake_peer.py --help             # pair / send / serve / unpair
 | Envío / recepción | Varios archivos, un video grande, nombre repetido (` (1)`), con y sin colección | Sí, con la herramienta de la otra punta; el video grande, en uno real |
 | Segundo plano (Android) | Recibir con la pantalla bloqueada y después de actualizar la app sin abrirla | No: los límites de batería cambian por fabricante |
 | Isla (Mac) | Pasar el mouse, arrastrar archivos hacia arriba, llegada de archivos, que la barra de menú siga usable | — (Mac) |
-| MCP | `pasala_new_files`, `pasala_get_file` con contenido, `pasala_send` a un dispositivo real | — (Mac) |
+| MCP | `pasala_new_files`, `pasala_get_file` con contenido, `pasala_send` a un dispositivo real | — (Mac, Windows, Linux) |
+| `kotlin/shared` | Android con `fake_peer.py` **y** escritorio contra la Mac, en los dos sentidos | Android: sí (emulador); escritorio: contenedores |
+| Isla / bandeja (Windows, Linux) | Bandeja con su menú, isla que crece al pasar el mouse, soltar archivos, moverla de pantalla | Contenedores sirven; la transparencia en Linux depende del compositor |
 | Tailscale | Mandar con el otro dispositivo fuera de la LAN | No |
 
 Lo que no se probó se informa como `UNVERIFIED`.

@@ -50,4 +50,15 @@ parecerse a otras apps. Misma geometría en las dos plataformas.
 Se evaluó unificar Android + iPhone con Kotlin/Compose Multiplatform. Se descartó: obligaba a reescribir
 la app Android que ya anda (red, servidor, MediaStore), la extensión de Compartir de iOS igual va en Swift
 y la Mac quedaba como un tercer mundo. En cambio `apple/` es un solo paquete Swift: `PasalaCore` + `PasalaKit`
-(motor y vistas de marca) los usan la app de Mac, la de iPhone y su extensión. Quedan dos códigos: Apple y Android.
+(motor y vistas de marca) los usan la app de Mac, la de iPhone y su extensión. Quedan dos códigos: Apple y Android (Android después compartió el suyo con escritorio, ver D-010).
+
+<a id="d-010"></a>
+## D-010 — 2026-11-24 — Windows y Linux en Kotlin, compartiendo el núcleo con Android
+Para Windows y Linux se eligió Compose Multiplatform Desktop (JVM) en vez de una tercera base de código.
+El protocolo de Android (modelos, `Store`, cliente, servidor HTTP mínimo, vincular, mandar, recibir) pasó a
+`kotlin/shared`, una biblioteca Kotlin/JVM que compilan `android/` y `desktop/`. Lo que cambia por plataforma
+entra por `ReceiverHost` / `SenderHost` / `Platform` (MediaStore y notificaciones en Android; carpetas, índice
+SQLite y bandeja en escritorio). Es JVM puro y no KMP con `commonMain` porque los dos destinos son JVM;
+si algún día se suma uno que no lo sea, se convierte. Quedan dos familias de código: Swift (Mac, iPhone) y
+Kotlin (Android, Windows, Linux); el contrato entre las dos sigue siendo `docs/PROTOCOL.md`. Costo: un
+instalador con su propio Java (~60 MB) y la barra de título la dibuja cada sistema.

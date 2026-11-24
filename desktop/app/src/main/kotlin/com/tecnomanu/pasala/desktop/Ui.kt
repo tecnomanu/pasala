@@ -18,16 +18,19 @@ object Ui {
     /** The send job the open send window is following (it clears it when closed). */
     var sendJob by mutableStateOf<String?>(null)
     var islandHidden by mutableStateOf(false)
-    /** Bumped to bring an already open window to the front. */
-    var focusTick by mutableStateOf(0)
+    /** Which window to bring to the front, and a counter so asking twice still works. */
+    var focus by mutableStateOf("" to 0)
+        private set
+
+    private fun raise(id: String) { focus = id to focus.second + 1 }
 
     fun onMain(block: () -> Unit) = SwingUtilities.invokeLater(block)
 
-    fun showMain() { mainOpen = true; focusTick++ }
-    fun showPair() { pairOpen = true; focusTick++ }
-    fun showSettings() { settingsOpen = true; focusTick++ }
+    fun showMain() { mainOpen = true; raise("main") }
+    fun showPair() { pairOpen = true; raise("pair") }
+    fun showSettings() { settingsOpen = true; raise("settings") }
     fun showSend(files: List<File> = emptyList(), to: String? = null) {
-        sendFiles = files; sendTo = to; sendJob = null; focusTick++
+        sendFiles = files; sendTo = to; sendJob = null; raise("send")
     }
 
     fun sendOpenFor(jobId: String) = sendFiles != null && sendJob == jobId

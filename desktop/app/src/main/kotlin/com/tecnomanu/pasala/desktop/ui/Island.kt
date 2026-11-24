@@ -22,7 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,9 +46,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.WindowPosition
-import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.awt.ComposeDialog
+import androidx.compose.ui.window.DialogWindow
 import com.tecnomanu.pasala.core.Live
 import com.tecnomanu.pasala.core.Receiver
 import com.tecnomanu.pasala.core.Sender
@@ -68,15 +66,7 @@ import java.awt.GraphicsEnvironment
 import java.awt.MouseInfo
 import java.awt.Rectangle
 import java.awt.Toolkit
-import java.awt.datatransfer.DataFlavor
-import java.awt.dnd.DnDConstants
-import java.awt.dnd.DropTarget
-import java.awt.dnd.DropTargetAdapter
-import java.awt.dnd.DropTargetDragEvent
-import java.awt.dnd.DropTargetDropEvent
-import java.awt.dnd.DropTargetEvent
 import java.io.File
-import java.net.URI
 
 private enum class Mode { Idle, Open, Transfer, Done, Drop, Offer, Paired, PickText, TextArrived }
 
@@ -150,7 +140,7 @@ fun Island() {
         offer != null -> Mode.Offer
         running.isNotEmpty() || incoming.isNotEmpty() -> Mode.Transfer
         pairedUntil > now -> Mode.Paired
-        lastText != null && lastText!!.second > now && !hovering -> Mode.TextArrived
+        lastText != null && lastText!!.second > now -> Mode.TextArrived
         hovering || pinned || moving -> Mode.Open
         toast != null && toast!!.until > now -> Mode.Done
         else -> Mode.Idle
@@ -187,40 +177,40 @@ fun Island() {
         Mode.TextArrived -> DpSize(540.dp, 172.dp)
     }
 
-    val state = rememberWindowState(size = size, position = islandPosition(screenId, size))
-    LaunchedEffect(size, screenId, moving) {
-        if (!moving) {
-            state.size = size
-            state.position = islandPosition(screenId, size)
-        }
-    }
+    val bounds = islandBounds(screenId, size)
 
-    Window(
-        onCloseRequest = {},
-        state = state,
+    DialogWindow(
         visible = visible,
-        title = "Pasala",
-        undecorated = true,
-        transparent = true,
-        resizable = false,
-        alwaysOnTop = true,
-        focusable = false,
+        create = {
+            // An owner-less dialog stays out of the taskbar (Windows and X11) and never takes focus.
+            ComposeDialog().apply {
+                type = java.awt.Window.Type.UTILITY
+                isUndecorated = true
+                isTransparent = true
+                isAlwaysOnTop = true
+                focusableWindowState = false
+                title = "Pasala"
+                setBounds(islandBounds(screenId, size))
+            }
+        },
+        dispose = { it.dispose() },
+        // One setBounds: window managers ignore size changes that arrive apart from the move.
+        update = { w -> if (!moving && w.bounds != bounds) w.bounds = bounds },
     ) {
         val tiles = remember { mutableStateMapOf<String, Rect>() }
         val density = window.graphicsConfiguration?.defaultTransform?.scaleX ?: 1.0
-        DisposableEffect(window) {
-            window.dropTarget = DropTarget(window, DnDConstants.ACTION_COPY, object : DropTargetAdapter() {
-                override fun dragEnter(e: DropTargetDragEvent) { dragging = true; e.acceptDrag(DnDConstants.ACTION_COPY) }
-                override fun dragExit(e: DropTargetEvent) { dragging = false }
-                override fun drop(e: DropTargetDropEvent) {
-                    e.acceptDrop(DnDConstants.ACTION_COPY)
-                    val files = droppedFiles(e)
-                    val p = e.location
-                    val px = (p.x * density).toFloat(); val py = (p.y * density).toFloat()
-                    val target = tiles.entries.firstOrNull { it.value.contains(androidx.compose.ui.geometry.Offset(px, py)) }?.key
-                    e.dropComplete(files.isNotEmpty())
-                    dragging = false
-                    if (files.isEmpty()) return
+
+        val shape = RoundedCornerShape(if (mode == Mode.Idle) 17.dp else 24.dp)
+        val alpha by animateFloatAsState(if (moving) 0.6f else 1f)
+        Box(
+            Modifier.fillMaxSize().clip(shape).background(P.ink.copy(alpha = 0.97f * alpha))
+                .border(1.dp, if (mode == Mode.Drop || moving) P.violet else P.line, shape)
+                .fileDrop(onHover = { dragging = it }) { files, p ->
+                    // Drop point is in AWT units; tile bounds are in pixels.
+                    val target = p?.let { pt ->
+                        val at = androidx.compose.ui.geometry.Offset((pt.x * density).toFloat(), (pt.y * density).toFloat())
+                        tiles.entries.firstOrNull { it.value.contains(at) }?.key
+                    }
                     val list = Store.state.value.peers
                     when {
                         target != null -> sendOrAsk(files, target)
@@ -228,18 +218,16 @@ fun Island() {
                         else -> Ui.showSend(files)
                     }
                 }
-            }, true)
-            onDispose { window.dropTarget = null }
-        }
-
-        val shape = RoundedCornerShape(if (mode == Mode.Idle) 17.dp else 24.dp)
-        val alpha by animateFloatAsState(if (moving) 0.6f else 1f)
-        Box(
-            Modifier.fillMaxSize().clip(shape).background(P.ink.copy(alpha = 0.97f * alpha))
-                .border(1.dp, if (mode == Mode.Drop || moving) P.violet else P.line, shape)
                 .onPointerEvent(PointerEventType.Enter) { hovering = true }
                 .onPointerEvent(PointerEventType.Exit) {
-                    scope.launch { delay(250); if (!isPointerInside(window)) hovering = false }
+                    scope.launch {
+                        delay(250)
+                        if (!isPointerInside(window)) {
+                            hovering = false
+                            // A text the person already looked at closes soon after the pointer leaves.
+                            Desktop.lastText.value?.let { (f, until) -> if (until > System.currentTimeMillis()) Desktop.lastText.value = f to (System.currentTimeMillis() + 1500) }
+                        }
+                    }
                 }
                 .pointerInput(Unit) {
                     detectDragGesturesAfterLongPress(
@@ -251,9 +239,7 @@ fun Island() {
                         onDragCancel = { moving = false },
                         onDrag = { change, _ ->
                             change.consume()
-                            MouseInfo.getPointerInfo()?.location?.let { p ->
-                                state.position = WindowPosition((p.x - state.size.width.value / 2).dp, (p.y - 17).dp)
-                            }
+                            MouseInfo.getPointerInfo()?.location?.let { p -> window.setLocation(p.x - window.width / 2, p.y - 17) }
                         },
                     )
                 }
@@ -292,17 +278,6 @@ private fun sendOrAsk(files: List<File>, peerId: String) {
     if (peer.collections.isNotEmpty()) Ui.showSend(files, peerId) else Desktop.sendFiles(files, peerId)
 }
 
-@Suppress("UNCHECKED_CAST")
-private fun droppedFiles(e: DropTargetDropEvent): List<File> {
-    val t = e.transferable
-    runCatching { if (t.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) return (t.getTransferData(DataFlavor.javaFileListFlavor) as List<File>).filter { it.isFile } }
-    // Some Linux file managers only offer text/uri-list.
-    val uriList = runCatching { DataFlavor("text/uri-list;class=java.lang.String") }.getOrNull()
-    val text = runCatching { t.getTransferData(uriList) as String }.getOrNull() ?: return emptyList()
-    return text.lines().map { it.trim() }.filter { it.startsWith("file:") }
-        .mapNotNull { runCatching { File(URI(it)) }.getOrNull() }.filter { it.isFile }
-}
-
 private fun isPointerInside(w: java.awt.Window): Boolean {
     val p = MouseInfo.getPointerInfo()?.location ?: return false
     return Rectangle(w.locationOnScreen, w.size).contains(p)
@@ -315,13 +290,14 @@ private fun screenUnderPointer(): String? {
     return screens().firstOrNull { it.defaultConfiguration.bounds.contains(p) }?.iDstring
 }
 
-/** Top center of the chosen screen (the main one by default), below any top panel. */
-private fun islandPosition(screenId: String?, size: DpSize): WindowPosition {
+/** Top center of the chosen screen (the main one by default), below any top panel. AWT units = dp. */
+private fun islandBounds(screenId: String?, size: DpSize): Rectangle {
     val dev = screens().firstOrNull { it.iDstring == screenId } ?: GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice
     val gc = dev.defaultConfiguration
     val b = gc.bounds
     val top = runCatching { Toolkit.getDefaultToolkit().getScreenInsets(gc).top }.getOrDefault(0)
-    return WindowPosition((b.x + (b.width - size.width.value) / 2).dp, (b.y + top + 6).dp)
+    val w = size.width.value.toInt(); val h = size.height.value.toInt()
+    return Rectangle(b.x + (b.width - w) / 2, b.y + top + 6, w, h)
 }
 
 @Composable

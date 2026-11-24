@@ -76,6 +76,7 @@
 
     <string name="main_no_devices">Escaneá el código con tu celular para empezar.</string>
     <string name="connected">Conectado</string>
+    <string name="just_now">recién</string>
     <string name="seen_ago">Visto hace %1$s</string>
     <string name="not_connected">Sin conexión</string>
     <string name="add_device">Sumar dispositivo</string>

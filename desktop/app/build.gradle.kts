@@ -30,7 +30,7 @@ compose.resources {
 compose.desktop {
   application {
     mainClass = "com.tecnomanu.pasala.desktop.MainKt"
-    jvmArgs += listOf("-Dfile.encoding=UTF-8")
+    jvmArgs += listOf("-Dfile.encoding=UTF-8", "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED")
     nativeDistributions {
       targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage)
       packageName = "Pasala"

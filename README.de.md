@@ -3,7 +3,7 @@
 <p align="center"><a href="README.md">Español</a> · <a href="README.en.md">English</a> · <b>Deutsch</b></p>
 
 <p align="center">
-Schick Dateien zwischen deinem Mac, deinem iPhone und deinem Android hin und her, in jede Richtung.<br>
+Schick Dateien zwischen deinem Mac, deinem iPhone, deinem Android und deinen Windows- oder Linux-Rechnern hin und her, in jede Richtung.<br>
 Über das WLAN zu Hause oder über Tailscale. Keine Cloud, keine Konten, keine Telemetrie.
 </p>
 
@@ -39,7 +39,18 @@ die Namen der Menüpunkte unten sind die englischen.
 - Empfängt, solange Pasala geöffnet ist; Empfangenes landet in Dateien › Pasala und auf Wunsch in Fotos.
 - Zum Koppeln den Code mit der iPhone-Kamera scannen oder den eigenen zeigen.
 
-**Agenten (MCP)**: Mit `pasala-mcp` kann Claude oder ein anderer Agent den Index des Empfangenen abfragen
+**Windows und Linux**: dieselbe Idee wie auf dem Mac, im Infobereich der Taskleiste.
+- Eine Insel oben in der Mitte zeigt, wie viele Geräte verbunden sind oder was gerade angekommen ist; mit der Maus
+  darüber siehst du deine Geräte, das zuletzt Angekommene und die Knöpfe. Dateien darauf ziehen schickt sie;
+  gedrückt halten und ziehen bringt sie auf einen anderen Bildschirm. Sie lässt sich ausblenden.
+- Menü im Infobereich: Dateien senden, kopierten Text senden, an ein Gerät senden, Empfangsordner öffnen, Gerät
+  hinzufügen, Einstellungen.
+- **Strg+Alt+P** schickt den kopierten Text aus jeder App. Angekommener Text wartet darauf, kopiert zu werden.
+- Windows: Rechtsklick auf Dateien → *Senden an › Pasala*. Linux: *Senden an* in Thunar, *Skripte* in Nautilus,
+  Aktionen in Nemo und Dolphin.
+- Empfangenes landet in `Downloads/Pasala`; Sammlungen und „vor dem Empfangen fragen“ gibt es auch.
+
+**Agenten (MCP)**: Mit `pasala-mcp` (Mac) und `Pasala --mcp` (Windows/Linux) kann Claude oder ein anderer Agent den Index des Empfangenen abfragen
 (was angekommen ist, von wem, wann und wo es gespeichert wurde), ein Bild ansehen und Dateien an ein Gerät schicken.
 
 ## Aufbau
@@ -48,7 +59,9 @@ die Namen der Menüpunkte unten sind die englischen.
 docs/PROTOCOL.md     Vertrag zwischen den Apps (QR, Routen, Header, Sammlungen)
 apple/               Swift-Paket: gemeinsamer Kern + Mac-App + pasala-mcp
 apple/iOS/           iPhone-App + Teilen-Erweiterung (gleicher Kern)
+kotlin/shared/       Kotlin-Kern des Protokolls, gemeinsam für Android und Desktop
 android/             Android-App (Kotlin + Jetpack Compose)
+desktop/             App für Windows und Linux (Kotlin + Compose Desktop) + MCP
 docs/engineering/    Systemübersicht, Entscheidungen, Tests, Änderungsablauf (auf Spanisch)
 ```
 
@@ -104,6 +117,20 @@ JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
+## Windows und Linux
+
+Installer: `.msi` (Windows 10/11), `.deb` (Ubuntu/Debian) und AppImage (jedes x64-Linux). Sie bringen ihr eigenes Java mit.
+Zum Bauen braucht es JDK 17+ auf demselben System:
+
+```bash
+cd desktop
+./gradlew :app:packageDeb :app:packageAppImage && tools/make-appimage.sh   # Linux
+gradlew.bat :app:packageMsi                                                # Windows
+```
+
+Unter Linux braucht die Transparenz der Insel einen Desktop mit Compositor, und das globale Tastenkürzel
+funktioniert unter X11 (unter Wayland ein Systemkürzel auf `pasala --send-text` legen).
+
 ## Sicherheit
 
 - Nur Geräte, die per QR-Code gekoppelt wurden, sprechen miteinander (Einmalcode, läuft nach 5 Minuten ab);
@@ -114,4 +141,4 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ## Lizenz
 
 [MIT](LICENSE). Die Schrift Plus Jakarta Sans steht unter der
-[SIL Open Font License](android/third_party/plus-jakarta-sans/OFL.txt).
+[SIL Open Font License](android/third_party/plus-jakarta-sans/OFL.txt) (Kopie auch in `desktop/third_party/`).

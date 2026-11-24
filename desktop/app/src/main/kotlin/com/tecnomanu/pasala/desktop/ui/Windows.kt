@@ -78,11 +78,6 @@ import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import java.awt.FileDialog
 import java.awt.Frame
-import java.awt.datatransfer.DataFlavor
-import java.awt.dnd.DnDConstants
-import java.awt.dnd.DropTarget
-import java.awt.dnd.DropTargetAdapter
-import java.awt.dnd.DropTargetDropEvent
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -90,11 +85,12 @@ import javax.swing.JFileChooser
 
 /** A Pasala window: dark surface, brand icon, brought to the front when asked again. */
 @Composable
-fun PasalaWindow(title: String, size: DpSize, onClose: () -> Unit, resizable: Boolean = true, content: @Composable ColumnScope.(java.awt.Window) -> Unit) {
+fun PasalaWindow(id: String, title: String, size: DpSize, onClose: () -> Unit, resizable: Boolean = true, content: @Composable ColumnScope.(java.awt.Window) -> Unit) {
     val state = rememberWindowState(size = size, position = WindowPosition(Alignment.Center))
     Window(onCloseRequest = onClose, state = state, title = title, icon = painterResource(Res.drawable.pasala_icon), resizable = resizable) {
         LaunchedEffect(window) { com.tecnomanu.pasala.desktop.DarkTitleBar.apply(window) }
-        LaunchedEffect(Ui.focusTick) { window.toFront(); window.requestFocus() }
+        val focus = Ui.focus
+        LaunchedEffect(focus) { if (focus.first == id) { window.toFront(); window.requestFocus() } }
         Column(Modifier.fillMaxSize().background(P.ink)) { content(window) }
     }
 }
@@ -102,10 +98,11 @@ fun PasalaWindow(title: String, size: DpSize, onClose: () -> Unit, resizable: Bo
 @Composable
 private fun SectionLabel(text: String) = T(text.uppercase(), 10.sp, FontWeight.ExtraBold, P.dim)
 
+@Composable
 private fun relative(time: Long, now: Long = System.currentTimeMillis()): String {
     val m = (now - time) / 60_000
     return when {
-        m < 1 -> "1 min"
+        m < 1 -> stringResource(Res.string.just_now)
         m < 60 -> "${m} min"
         m < 60 * 24 -> "${m / 60} h"
         else -> DateFormat.getDateInstance(DateFormat.SHORT).format(Date(time))
@@ -121,9 +118,8 @@ fun MainWindow() {
     val recent by Desktop.recent.collectAsState()
     val collections by Desktop.collections.collectAsState()
     var filter by remember { mutableStateOf("in") }
-    PasalaWindow("Pasala", DpSize(980.dp, 660.dp), onClose = { Ui.mainOpen = false }) { window ->
-        AcceptDrops(window) { Ui.showSend(it) }
-        Row(Modifier.fillMaxSize()) {
+    PasalaWindow("main", "Pasala", DpSize(980.dp, 660.dp), onClose = { Ui.mainOpen = false }) { window ->
+        Row(Modifier.fillMaxSize().fileDrop { files, _ -> Ui.showSend(files) }) {
             // Left: devices and collections.
             Column(Modifier.width(300.dp).fillMaxHeight().background(P.surface).padding(20.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -240,23 +236,6 @@ private fun DeckRow(f: FileRecord) {
     }
 }
 
-/** Files dropped on a window open the send window with them. */
-@Composable
-private fun AcceptDrops(window: java.awt.Window, onFiles: (List<File>) -> Unit) {
-    DisposableEffect(window) {
-        window.dropTarget = DropTarget(window, DnDConstants.ACTION_COPY, object : DropTargetAdapter() {
-            @Suppress("UNCHECKED_CAST")
-            override fun drop(e: DropTargetDropEvent) {
-                e.acceptDrop(DnDConstants.ACTION_COPY)
-                val files = runCatching { (e.transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>).filter { it.isFile } }.getOrDefault(emptyList())
-                e.dropComplete(files.isNotEmpty())
-                if (files.isNotEmpty()) onFiles(files)
-            }
-        }, true)
-        onDispose { window.dropTarget = null }
-    }
-}
-
 private fun chooseFolder(parent: java.awt.Window): File? {
     val c = JFileChooser().apply { fileSelectionMode = JFileChooser.DIRECTORIES_ONLY }
     return if (c.showOpenDialog(parent) == JFileChooser.APPROVE_OPTION) c.selectedFile else null
@@ -305,7 +284,7 @@ fun PairWindow() {
     val errUnreach = stringResource(Res.string.err_unreachable)
     val errSelf = stringResource(Res.string.err_self)
     val errNotCode = stringResource(Res.string.err_not_code)
-    PasalaWindow(stringResource(Res.string.add_device), DpSize(520.dp, 700.dp), onClose = { Ui.pairOpen = false }, resizable = false) {
+    PasalaWindow("pair", stringResource(Res.string.add_device), DpSize(520.dp, 700.dp), onClose = { Ui.pairOpen = false }, resizable = false) {
         Column(Modifier.fillMaxSize().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
             T(stringResource(Res.string.add_device), 26.sp, FontWeight.ExtraBold)
             T(stringResource(Res.string.pair_instructions), 13.sp, color = P.dim)
@@ -370,9 +349,8 @@ fun SendWindow() {
     LaunchedEffect(peerId) { peer?.let { Resolver.reach(it) } } // fresh collections from its hello
     val job = Ui.sendJob?.let { jobs[it] }
     val pickTitle = stringResource(Res.string.choose_files)
-    PasalaWindow(stringResource(Res.string.send), DpSize(580.dp, 620.dp), onClose = { Ui.sendJob?.let(Sender::forget); Ui.sendFiles = null; Ui.sendJob = null }) { window ->
-        AcceptDrops(window) { Ui.sendFiles = (files + it).distinct() }
-        Column(Modifier.fillMaxSize().padding(28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    PasalaWindow("send", stringResource(Res.string.send), DpSize(580.dp, 620.dp), onClose = { Ui.sendJob?.let(Sender::forget); Ui.sendFiles = null; Ui.sendJob = null }) { window ->
+        Column(Modifier.fillMaxSize().fileDrop { dropped, _ -> if (Ui.sendJob == null) Ui.sendFiles = (files + dropped).distinct() }.padding(28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             T(stringResource(Res.string.send), 26.sp, FontWeight.ExtraBold)
             if (state.peers.isEmpty()) {
                 T(stringResource(Res.string.pair_first), 13.sp, color = P.dim)
@@ -459,7 +437,7 @@ fun SettingsWindow() {
     val collections by Desktop.collections.collectAsState()
     var name by remember { mutableStateOf(state.identity?.name.orEmpty()) }
     var atLogin by remember { mutableStateOf(Integrations.opensAtLogin()) }
-    PasalaWindow(stringResource(Res.string.settings), DpSize(560.dp, 680.dp), onClose = { Ui.settingsOpen = false; Desktop.rename(name) }) { window ->
+    PasalaWindow("settings", stringResource(Res.string.settings), DpSize(560.dp, 680.dp), onClose = { Ui.settingsOpen = false; Desktop.rename(name) }) { window ->
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             T(stringResource(Res.string.settings), 26.sp, FontWeight.ExtraBold)
             T(stringResource(Res.string.this_computer_name), 12.sp, FontWeight.SemiBold, P.dim)
