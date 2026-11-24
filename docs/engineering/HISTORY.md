@@ -138,3 +138,37 @@ optimización de batería), que la exención evita; **no está verificado en el 
 latencia: en el Samsung la respuesta ya era rápida sin él y no hubo nada que mejorar.
 **Where:** `android/…/service/Background.kt`, tarjeta en `ui/home/HomeScreen.kt`, fila en `ui/settings/SettingsScreen.kt`,
 permiso en `AndroidManifest.xml`.
+
+<a id="idle-wakeups"></a>
+### En reposo no hay timers, locks ni búsquedas; cada `hello` cuesta lo mínimo
+**Rule:** con la pantalla apagada el proceso solo tiene el socket escuchando y el anuncio NSD: sin alarmas, jobs,
+wake locks ni Wi-Fi locks (esos se toman solo durante una transferencia, `core/Radio.kt`), sin búsqueda NSD (solo
+con la app en pantalla) y sin `hello` periódicos (solo con Home visible). Un `hello` entrante actualiza el peer en
+memoria y escribe el archivo de estado solo si cambió algo o pasaron 10 min (`Store.seen`). El anuncio NSD se
+rehace solo si cambió lo anunciado (nombre, puerto, direcciones).
+**Why:** MagicOS marcó a Pasala como "se activa frecuentemente en segundo plano". Medido en ese teléfono, 6 min con
+la pantalla apagada (`dumpsys batterystats` tras `--reset`): 0 alarmas, 0 jobs, 0 wake locks; 262 paquetes
+recibidos y 260 enviados (~2600/h) y ~0,8 s de CPU, todo por conexiones entrantes: la Mac hacía `hello` cada 20 s
+a cada dirección (LAN y Tailscale). Cada uno además reescribía el JSON de estado. El protocolo ahora pide no hacer
+`hello` en bucle sin pantalla visible (`PROTOCOL.md`, "Cada cuánto"); el lado que pregunta es el que tiene que cambiar.
+Mac: cada 20 s solo con la isla abierta o una ventana visible; si no, cada 10 min; y prueba primero la última
+dirección sola en vez de todas a la vez (de ~2600 paquetes/h a unas decenas).
+**Where:** `android/…/data/Store.kt` (`seen`), `net/PasalaServer.kt`, `service/PasalaService.kt` (`scheduleReannounce`);
+`apple/Sources/PasalaKit/Engine.swift` (`tick`, `resolve`).
+
+<a id="survive-swipe"></a>
+### Sacar a Pasala de recientes no la apaga
+**Rule:** el servicio declara `stopWithTask="false"` y en `onTaskRemoved` vuelve a afirmarse en primer plano;
+`onStartCommand` devuelve `START_STICKY`.
+**Why:** al deslizar la app desde recientes parecía desaparecer; el servidor tiene que seguir escuchando.
+**Where:** `android/app/src/main/AndroidManifest.xml`, `service/PasalaService.kt`.
+
+<a id="vendor-autostart"></a>
+### En Honor el arranque solo depende de "Inicio de apps"
+**Rule:** Ajustes muestra "Inicio automático" con un atajo a la pantalla del fabricante cuando existe
+(`systemmanager://com.hihonor.systemmanager/appcontrol`). No se usa `LOCKED_BOOT_COMPLETED`.
+**Why:** en MagicOS, sin ese permiso, la app no recibe `BOOT_COMPLETED` ni `MY_PACKAGE_REPLACED`: después de
+reiniciar o actualizar queda apagada hasta que se abre (se vio al actualizar por `adb`). `LOCKED_BOOT_COMPLETED` no
+sirve: identidad y dispositivos vinculados viven en el almacenamiento que se abre recién al desbloquear.
+**Where:** `android/…/service/Background.kt` (`vendorLaunchSettings`), `ui/settings/SettingsScreen.kt`, `<queries>` en el manifest.
+

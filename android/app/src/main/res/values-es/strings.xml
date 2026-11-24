@@ -35,8 +35,8 @@
     <string name="detail_id">Identificador</string>
     <string name="detail_devices">Dispositivos sumados</string>
     <string name="settings_background_title">Funciona con la pantalla apagada</string>
-    <string name="settings_background_on">Pasala puede seguir funcionando en segundo plano: tus dispositivos la encuentran aunque el teléfono esté en reposo.</string>
-    <string name="settings_background_off">El teléfono puede dormir a Pasala para ahorrar batería. Permitilo para que los archivos sigan llegando con la pantalla apagada.</string>
+    <string name="settings_background_on">Tus dispositivos encuentran este teléfono aunque tenga la pantalla apagada. Para desactivarlo, tocá Cambiar.</string>
+    <string name="settings_background_off">El teléfono puede dormir a Pasala para ahorrar batería. Tocá Cambiar para que los archivos sigan llegando con la pantalla apagada.</string>
     <string name="share_empty_title">No hay archivos para pasar</string>
     <string name="share_empty_body">Pasala pasa fotos, videos, archivos y texto, pero esto no traía nada para pasar.</string>
     <string name="ch_ready_name">Lista para recibir</string>
@@ -179,4 +179,18 @@
     <string name="text_sent_body">Te espera ahí, listo para copiar.</string>
     <string name="text_tap_hint">Tocá para copiar</string>
     <string name="text_too_long_action">Este texto es demasiado largo para copiarlo o compartirlo desde acá.</string>
+    <string name="action_change">Cambiar</string>
+    <string name="settings_background_state_on">Activado</string>
+    <string name="settings_background_state_off">Desactivado</string>
+    <string name="notif_action_send_clip">Enviar lo copiado</string>
+    <string name="shortcut_clip_short">Enviar copiado</string>
+    <string name="shortcut_clip_long">Enviar lo copiado</string>
+    <string name="shortcut_files_short">Enviar archivos</string>
+    <string name="shortcut_files_long">Enviar archivos</string>
+    <string name="widget_label">Envío rápido</string>
+    <string name="widget_desc">Mandá lo copiado o un archivo con un toque</string>
+    <string name="widget_clip">Enviar texto copiado</string>
+    <string name="widget_file">Enviar archivo</string>
+    <string name="settings_autostart_title">Inicio automático</string>
+    <string name="settings_autostart_body">Este teléfono decide qué apps pueden arrancar solas. Permitíselo a Pasala para que esté lista después de reiniciar o actualizar.</string>
 </resources>

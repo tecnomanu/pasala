@@ -78,14 +78,7 @@ class PasalaServer {
 
     private fun hello(peer: Peer, req: HttpRequest): HttpResponse {
         val body = PasalaJson.decodeFromString(HelloRequest.serializer(), req.body.readAllText())
-        Store.updatePeer(peer.id) {
-            it.copy(
-                name = body.name.ifBlank { it.name },
-                port = if (body.port > 0) body.port else it.port,
-                addrs = body.addrs.ifEmpty { it.addrs },
-                lastSeen = System.currentTimeMillis(),
-            )
-        }
+        Store.seen(peer.id, body.name, body.port, body.addrs)
         Live.setOnline(peer.id, true)
         return HttpResponse.ok(PasalaJson.encodeToString(HelloResponse.serializer(), me()))
     }
@@ -93,7 +86,7 @@ class PasalaServer {
     private fun offer(peer: Peer, req: HttpRequest): HttpResponse {
         val body = PasalaJson.decodeFromString(OfferRequest.serializer(), req.body.readAllText())
         if (body.batch.isBlank()) return HttpResponse.error(400, "bad_request")
-        Store.updatePeer(peer.id) { it.copy(lastSeen = System.currentTimeMillis()) }
+        Store.seen(peer.id)
         val accepted = Receiver.handleOffer(peer, body)
         return HttpResponse.ok(PasalaJson.encodeToString(OfferResponse.serializer(), OfferResponse(accepted)))
     }
@@ -111,7 +104,7 @@ class PasalaServer {
         if (size < 0) return HttpResponse.error(411, "length_required")
         return try {
             val final = Receiver.receiveFile(peer, batch, index, count, name, mime, size, modified, req.body)
-            Store.updatePeer(peer.id) { it.copy(lastSeen = System.currentTimeMillis()) }
+            Store.seen(peer.id)
             HttpResponse.ok(PasalaJson.encodeToString(FileResponse.serializer(), FileResponse(true, final)))
         } catch (e: IllegalStateException) {
             HttpResponse.error(409, "not_accepted")
@@ -138,7 +131,7 @@ class PasalaServer {
         // The id names a file on disk: only accept plain ids (UUIDs and the like).
         if (!TEXT_ID.matches(body.id)) return HttpResponse.error(400, "bad_request")
         if (body.text.toByteArray(Charsets.UTF_8).size > TEXT_MAX_BYTES) return HttpResponse.error(413, "too_large")
-        Store.updatePeer(peer.id) { it.copy(lastSeen = System.currentTimeMillis()) }
+        Store.seen(peer.id)
         Receiver.receiveText(peer, body.id, body.text)
         return HttpResponse.ok(PasalaJson.encodeToString(OkResponse.serializer(), OkResponse(true)))
     }

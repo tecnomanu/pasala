@@ -145,10 +145,22 @@ public final class Engine: ObservableObject {
         Task { await refreshOnline() }
     }
 
+    /// True while someone is looking at Pasala (open island, a window, the app on screen). Set by each app.
+    public var isOnScreen: () -> Bool = { true }
+    private var lastRefresh = Date.distantPast
+
     private func tick() {
         addrs = NetInfo.addresses()
         if pairExpires < .now { newPairCode() }
         transfers.removeAll { !$0.isRunning && ($0.finishedAt ?? .now) < .now.addingTimeInterval(-30) }
+        // Every check-in wakes the phones. See HISTORY.md#idle-wakeups
+        let every: TimeInterval = isOnScreen() ? 20 : 600
+        if Date().timeIntervalSince(lastRefresh) >= every - 1 { Task { await refreshOnline() } }
+    }
+
+    /// Re-check who is reachable now, at most every 15 s (e.g. when the island opens).
+    public func refreshSoon() {
+        guard Date().timeIntervalSince(lastRefresh) > 15 else { return }
         Task { await refreshOnline() }
     }
 
@@ -490,7 +502,12 @@ public final class Engine: ObservableObject {
     public func resolve(_ peer: Peer) async -> String? {
         var candidates: [String] = []
         for c in [peer.lastAddr, discovered[peer.id]].compactMap({ $0 }) + peer.addrs where !candidates.contains(c) { candidates.append(c) }
-        // Try LAN-ish first in parallel, return the first that answers.
+        // The last address that worked usually still does: try it alone before waking every interface.
+        if let first = candidates.first {
+            if await hello(peer, host: first) { return first }
+            candidates.removeFirst()
+            if candidates.isEmpty { return nil }
+        }
         return await withTaskGroup(of: (Int, String?).self) { group in
             for (i, host) in candidates.enumerated() {
                 group.addTask { @MainActor in (i, await self.hello(peer, host: host) ? host : nil) }
@@ -504,6 +521,7 @@ public final class Engine: ObservableObject {
     }
 
     public func refreshOnline() async {
+        lastRefresh = .now
         for p in peers {
             let ok = await resolve(p) != nil
             if ok { online.insert(p.id) } else { online.remove(p.id) }

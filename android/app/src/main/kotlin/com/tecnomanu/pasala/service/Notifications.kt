@@ -72,6 +72,13 @@ object Notifications {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentIntent(openApp(context))
+            .addAction(
+                0, context.getString(R.string.notif_action_send_clip),
+                PendingIntent.getActivity(
+                    context, 7, com.tecnomanu.pasala.ui.send.TextActivity.fromClipboard(context),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                ),
+            )
             .build()
 
     private fun canPost(context: Context) =

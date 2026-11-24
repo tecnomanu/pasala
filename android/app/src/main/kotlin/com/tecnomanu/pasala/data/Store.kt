@@ -78,6 +78,36 @@ object Store {
         s.copy(peers = others + peer.copy(localName = peer.localName ?: existing?.localName))
     }
 
+    /**
+     * A peer was heard from. Peers check in every few seconds, so the file is only rewritten when
+     * something changed or the stored time is stale. See HISTORY.md#idle-wakeups
+     */
+    fun seen(id: String, name: String? = null, port: Int? = null, addrs: List<String>? = null) {
+        val now = System.currentTimeMillis()
+        var changed = false
+        _state.update { s ->
+            s.copy(peers = s.peers.map { p ->
+                if (p.id != id) return@map p
+                val n = p.copy(
+                    name = name?.ifBlank { null } ?: p.name,
+                    port = port?.takeIf { it > 0 } ?: p.port,
+                    addrs = addrs?.ifEmpty { null } ?: p.addrs,
+                )
+                changed = n.name != p.name || n.port != p.port || n.addrs != p.addrs ||
+                    now - (seenSaved[id] ?: 0L) > SEEN_PERSIST_MS
+                n.copy(lastSeen = now)
+            })
+        }
+        if (changed) {
+            seenSaved[id] = now
+            persist()
+        }
+    }
+
+    private const val SEEN_PERSIST_MS = 10 * 60 * 1000L
+    /** When each peer's lastSeen last reached the file. */
+    private val seenSaved = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
     fun updatePeer(id: String, block: (Peer) -> Peer) = mutate { s ->
         s.copy(peers = s.peers.map { if (it.id == id) block(it) else it })
     }

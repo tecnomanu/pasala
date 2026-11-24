@@ -74,6 +74,20 @@ Body: `{"name":"…","port":47820,"addrs":["…"]}` del que llama. El receptor a
 `{"id","name","platform","port","addrs","collections"}`. Se usa como ping antes de mandar y cada vez que
 la app vuelve al frente.
 
+**Cada cuánto.** Cada `hello` que llega despierta al receptor (radio y CPU); un celular con la pantalla
+apagada lo cuenta como actividad en segundo plano y el sistema termina ofreciendo "detener la app".
+Por eso:
+
+- Se manda `hello` justo antes de mandar algo, cuando la app vuelve al frente y, mientras haya una
+  pantalla visible que muestre si los dispositivos están en línea, como mucho cada 20 s.
+- **Sin pantalla visible, como mucho cada 10 min** (y solo a la última dirección que anduvo). Para saber
+  si un dispositivo sigue en la LAN sin despertarlo alcanza con el anuncio mDNS/NSD (ver abajo); si no
+  aparece, se lo muestra como "visto hace…" con el último dato.
+- Siempre se prueba primero la última dirección que respondió, sola; las demás (LAN y Tailscale) recién
+  si esa falla.
+- Al buscar la dirección (ver abajo) se prueba primero la última que funcionó; las demás solo si esa falla,
+  así un `hello` es una sola conexión y no una por cada dirección.
+
 `collections` (opcional, puede faltar o venir vacío) son las **colecciones del receptor**: destinos con
 nombre que la persona armó en ese dispositivo (en la Mac, cada una es una carpeta).
 

@@ -110,6 +110,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.servicesProvider = services
         NSUpdateDynamicServices()
         MainActor.assumeIsolated {
+            Engine.shared.isOnScreen = {
+                NotchModel.shared.mode != .idle || NSApp.windows.contains { $0.isVisible && $0.styleMask.contains(.titled) }
+            }
             Engine.shared.start()
             let c = NotchController(); c.install(); notch = c
             statusBar = StatusBar()

@@ -13,7 +13,9 @@ Rige todo lo de [`../AGENTS.md`](../AGENTS.md). Esto es lo propio de la app Andr
 - Los archivos a mandar se leen en streaming desde el `content://`; nunca cargar un video entero en memoria.
 - Textos entre dispositivos (`/v1/text`): el cuerpo completo va a `filesDir/texts/<id>.txt` (`data/TextStore.kt`) y el
   historial guarda solo un resumen. Nunca se escribe el portapapeles sin que la persona toque "Copiar", y solo se lee
-  con Pasala al frente (botón de Home o el mosaico de ajustes rápidos, que abre `TextActivity`).
+  con Pasala al frente: `TextActivity` lo lee recién cuando su ventana tiene foco, y se abre desde el botón de Home
+  (visible solo si hay texto copiado, mirando la descripción del portapapeles, nunca el contenido), el mosaico de
+  ajustes rápidos, la acción de la notificación "Lista para recibir", el atajo del ícono y el widget.
 - Android no define colecciones (por ahora): ignora `collection` al recibir y responde `"collections":[]`.
 - Marca: `res/drawable/ic_launcher_foreground.xml`, `ic_launcher_monochrome.xml`, `ic_stat_mark.xml`,
   `ic_mark.xml`, generados desde `docs/brand/pasala-mark.svg`. Fuente Plus Jakarta Sans (OFL, ver
