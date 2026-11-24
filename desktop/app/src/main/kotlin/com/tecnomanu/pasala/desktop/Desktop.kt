@@ -63,6 +63,7 @@ object Desktop {
     fun setup() {
         Platform.name = if (Paths.isWindows) "windows" else "linux"
         Platform.debug = System.getenv("PASALA_DEBUG") == "1"
+        Platform.logger = LogFile::write
         TextStore.init(Paths.textsDir)
         Store.init(Paths.stateFile) { defaultName() }
         index = Index()
@@ -87,7 +88,11 @@ object Desktop {
         index.setSetting("port", port.toString())
         index.setSetting("device_name", Store.identity.name)
         Log.i(TAG, "listening on $port")
-        if (Platform.debug) Pairing.newCode()
+        if (Platform.debug) {
+            // Like the Mac's PASALA_DEBUG: the current pairing link in debug-pair.txt, to pair without a camera.
+            Live.appScope.launch { Pairing.current.collect { c -> c?.let { java.io.File(Paths.dataDir, "debug-pair.txt").writeText(it.payload) } } }
+            Pairing.newCode()
+        }
         Live.appScope.launch {
             while (true) {
                 runCatching { Resolver.refreshAll() }
@@ -148,6 +153,7 @@ object Desktop {
     /** "Send the copied text": the island asks which device. */
     fun beginSendText(text: String?) {
         val t = text?.trim().orEmpty()
+        Log.d(TAG, "send copied text: ${t.length} chars")
         if (t.isEmpty()) { _notices.tryEmit(Notice.NoText); return }
         pendingText.value = text
     }

@@ -41,7 +41,6 @@ fun main(args: Array<String>) {
     // A copy is already running: hand it the request and leave.
     if (LocalApi.openArgs(files, action)) exitProcess(0)
 
-    setX11ClassName()
     // File and folder pickers look like the rest of the system (GTK on Linux, Windows dialogs on Windows).
     runCatching { javax.swing.UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName()) }
     Desktop.setup()
@@ -77,7 +76,8 @@ private fun ApplicationScope.Pasala() {
         tooltip = "Pasala",
         onAction = { Ui.showMain() },
     ) {
-        Item(stringResource(Res.string.send_files_ellipsis)) { Ui.showSend() }
+        // AWT tray menus on Windows use a font without "…".
+        Item(stringResource(Res.string.send_files_ellipsis).dots()) { Ui.showSend() }
         Item(stringResource(Res.string.send_copied_text)) { Desktop.beginSendText(Clipboard.text()) }
         if (state.peers.isNotEmpty()) {
             Menu(stringResource(Res.string.send_to)) {
@@ -90,9 +90,9 @@ private fun ApplicationScope.Pasala() {
         CheckboxItem(stringResource(Res.string.show_island), !Ui.islandHidden) { Ui.hideIsland(!it) }
         Item(stringResource(Res.string.open_pasala)) { Ui.showMain() }
         Item(stringResource(Res.string.open_received_folder)) { Ui.open(Desktop.inbox.value.apply { mkdirs() }) }
-        Item(stringResource(Res.string.add_device_ellipsis)) { Ui.showPair() }
+        Item(stringResource(Res.string.add_device_ellipsis).dots()) { Ui.showPair() }
         Separator()
-        Item(stringResource(Res.string.settings_ellipsis)) { Ui.showSettings() }
+        Item(stringResource(Res.string.settings_ellipsis).dots()) { Ui.showSettings() }
         Item(stringResource(Res.string.quit)) { Desktop.stop(); exitApplication() }
     }
 
@@ -120,11 +120,4 @@ private fun Notices(tray: androidx.compose.ui.window.TrayState) {
     }
 }
 
-/** Linux taskbars and docks group windows by WM_CLASS, which AWT otherwise derives from the main class name. */
-private fun setX11ClassName() {
-    if (!Paths.isLinux) return
-    runCatching {
-        val tk = java.awt.Toolkit.getDefaultToolkit()
-        tk.javaClass.getDeclaredField("awtAppClassName").apply { isAccessible = true }.set(tk, "Pasala")
-    }
-}
+private fun String.dots() = replace("…", "...")

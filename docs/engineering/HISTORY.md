@@ -153,7 +153,7 @@ a cada dirección (LAN y Tailscale). Cada uno además reescribía el JSON de est
 `hello` en bucle sin pantalla visible (`PROTOCOL.md`, "Cada cuánto"); el lado que pregunta es el que tiene que cambiar.
 Mac: cada 20 s solo con la isla abierta o una ventana visible; si no, cada 10 min; y prueba primero la última
 dirección sola en vez de todas a la vez (de ~2600 paquetes/h a unas decenas).
-**Where:** `android/…/data/Store.kt` (`seen`), `net/PasalaServer.kt`, `service/PasalaService.kt` (`scheduleReannounce`);
+**Where:** `kotlin/shared/…/data/Store.kt` (`seen`), `kotlin/shared/…/net/PasalaServer.kt`, `android/…/service/PasalaService.kt` …; `service/PasalaService.kt` (`scheduleReannounce`);
 `apple/Sources/PasalaKit/Engine.swift` (`tick`, `resolve`).
 
 <a id="survive-swipe"></a>
@@ -172,3 +172,20 @@ reiniciar o actualizar queda apagada hasta que se abre (se vio al actualizar por
 sirve: identidad y dispositivos vinculados viven en el almacenamiento que se abre recién al desbloquear.
 **Where:** `android/…/service/Background.kt` (`vendorLaunchSettings`), `ui/settings/SettingsScreen.kt`, `<queries>` en el manifest.
 
+## Windows y Linux
+
+<a id="desktop-island-window"></a>
+### La isla es un diálogo sin dueño y se mueve y redimensiona en un solo `setBounds`
+**Rule:** la isla es un `ComposeDialog` sin dueño, sin borde, siempre arriba y sin foco; cada cambio de modo
+le da posición y tamaño juntos con `setBounds`.
+**Why:** como ventana normal aparecía en la barra de tareas (en X11 el tipo `UTILITY` no se respeta para
+frames); y si se le cambiaba tamaño y posición por separado, el gestor de ventanas de XFCE aplicaba la
+posición y descartaba el tamaño, y la isla quedaba como un rectángulo negro vacío.
+**Where:** `desktop/app/…/ui/Island.kt` (`Island`, `islandBounds`).
+
+<a id="desktop-drop"></a>
+### Soltar archivos pasa por el modificador de Compose, no por un `DropTarget` de AWT
+**Rule:** las ventanas reciben archivos con `Modifier.fileDrop` (`dragAndDropTarget`).
+**Why:** Compose ya pone su propio `DropTarget` en el lienzo de la ventana; uno de AWT en la ventana nunca
+recibe el arrastre (probado con Thunar).
+**Where:** `desktop/app/…/ui/Drops.kt`.

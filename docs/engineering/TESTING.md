@@ -84,7 +84,7 @@ PASALA_HOME=/tmp/pasala-a PASALA_DEBUG=1 ./gradlew :app:run   # copia aparte; lo
   como a una compu más, darles una IP de la LAN (red `macvlan`; en Windows `DHCP=Y`). Manejar el escritorio
   Linux con `docker exec -u abc -e DISPLAY=:1 … xdotool` y capturas con `xwd`; Windows por su visor web
   (`:8006`) o por SSH si se habilitó en `/oem/install.bat`. Borrar contenedores y volúmenes al terminar.
-- Vincular sin cámara: `PASALA_DEBUG=1` escribe el link en la salida; desde la Mac, `pasala_pair` del MCP con ese link;
+- Vincular sin cámara: `PASALA_DEBUG=1` escribe el link en la salida y en `debug-pair.txt` de la carpeta de datos; desde la Mac, `pasala_pair` del MCP con ese link;
   desde la compu, ventana Sumar dispositivo → "¿Es otra compu? Pegá acá su código".
 - Ruta local (lo que usa el MCP y una segunda ejecución): `curl -H "X-Pasala-Local: $(cat <datos>/local-token)"
   http://127.0.0.1:<puerto>/local/status`; sin el token o desde otra IP tiene que dar `401`.

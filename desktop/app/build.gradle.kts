@@ -29,13 +29,15 @@ compose.resources {
 
 compose.desktop {
   application {
-    mainClass = "com.tecnomanu.pasala.desktop.MainKt"
-    jvmArgs += listOf("-Dfile.encoding=UTF-8", "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED")
+    // A top-level `Pasala` class: Linux names the windows' WM_CLASS after it, so docks and taskbars say "Pasala".
+    mainClass = "Pasala"
+    jvmArgs += listOf("-Dfile.encoding=UTF-8")
     nativeDistributions {
       targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage)
       packageName = "Pasala"
       packageVersion = "1.0.0"
-      description = "Pass files and text between your own devices"
+      // Windows shows this as the app's name (firewall prompt, Task Manager).
+      description = "Pasala"
       vendor = "tecnomanu"
       copyright = "MIT"
       licenseFile.set(project.file("../../LICENSE"))

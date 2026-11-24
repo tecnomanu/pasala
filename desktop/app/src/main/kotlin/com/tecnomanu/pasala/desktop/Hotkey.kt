@@ -26,12 +26,13 @@ object Hotkey {
 
     private fun windows(onPress: () -> Unit) {
         val modNoRepeat = 0x4000
+        Log.i(TAG, "registering $LABEL")
         if (!User32.INSTANCE.RegisterHotKey(null, 1, WinUser.MOD_CONTROL or WinUser.MOD_ALT or modNoRepeat, 'P'.code)) {
             Log.w(TAG, "Ctrl+Alt+P is taken by another app"); return
         }
         val msg = WinUser.MSG()
         while (User32.INSTANCE.GetMessage(msg, null, 0, 0) > 0) {
-            if (msg.message == WinUser.WM_HOTKEY) onPress()
+            if (msg.message == WinUser.WM_HOTKEY) { Log.d(TAG, "shortcut pressed"); onPress() }
         }
     }
 
@@ -50,7 +51,7 @@ object Hotkey {
         val ev = X11.XEvent()
         while (true) {
             x.XNextEvent(display, ev)
-            if (ev.type == X11.KeyPress) onPress()
+            if (ev.type == X11.KeyPress) { Log.d(TAG, "shortcut pressed"); onPress() }
         }
     }
 }
