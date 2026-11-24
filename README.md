@@ -2,11 +2,6 @@
 
 <p align="center"><b>Español</b> · <a href="README.en.md">English</a> · <a href="README.de.md">Deutsch</a></p>
 
-> [!TIP]
-> **¿Sos un agente de IA (Claude, Codex, Cursor…)?** Leé [`AGENT_INSTALL.md`](AGENT_INSTALL.md): qué preguntarle a
-> tu usuario y cómo instalar Pasala en su computadora (macOS, Windows, Linux) y en sus celulares (Android por USB
-> o sin cable, iPhone con Xcode), vincularlos y conectarte por MCP.
-
 <p align="center">
 Pasá archivos entre tu Mac, tu iPhone, tu Android y tus compus con Windows o Linux, en cualquier dirección.<br>
 Por el Wi-Fi de casa o por Tailscale. Sin nube, sin cuentas, sin telemetría.
@@ -14,6 +9,11 @@ Por el Wi-Fi de casa o por Tailscale. Sin nube, sin cuentas, sin telemetría.
 
 <p align="center"><img src="docs/media/pasala-demo.gif" width="720" alt="Demo: el Android le pasa tres fotos a la Mac, llegan a la isla y una se abre; después un archivo arrastrado desde el Finder a la isla llega al Android y se abre ahí"></p>
 <p align="center"><a href="docs/media/pasala-demo.mp4">Ver el video (MP4)</a></p>
+
+> [!TIP]
+> **¿Sos un agente de IA (Claude, Codex, Cursor…)?** Leé [`AGENT_INSTALL.md`](AGENT_INSTALL.md): qué preguntarle a
+> tu usuario y cómo instalar Pasala en su computadora (macOS, Windows, Linux) y en sus celulares (Android por USB
+> o sin cable, iPhone con Xcode), vincularlos y conectarte por MCP.
 
 ## Qué hace
 

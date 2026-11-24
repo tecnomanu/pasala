@@ -2,11 +2,6 @@
 
 <p align="center"><a href="README.md">Español</a> · <b>English</b> · <a href="README.de.md">Deutsch</a></p>
 
-> [!TIP]
-> **Are you an AI agent (Claude, Codex, Cursor…)?** Read [`AGENT_INSTALL.md`](AGENT_INSTALL.md): what to ask your
-> user and how to install Pasala on their computer (macOS, Windows, Linux) and phones (Android by USB or without a
-> cable, iPhone with Xcode), pair them and connect yourself over MCP.
-
 <p align="center">
 Send files between your own Mac, iPhone, Android and Windows or Linux computers, in any direction.<br>
 Over your home Wi-Fi or over Tailscale. No cloud, no accounts, no telemetry.
@@ -14,6 +9,11 @@ Over your home Wi-Fi or over Tailscale. No cloud, no accounts, no telemetry.
 
 <p align="center"><img src="docs/media/pasala-demo.gif" width="720" alt="Demo: the Android phone sends three photos to the Mac, they land in the island and one opens; then a file dragged from Finder onto the island arrives on the phone and opens there"></p>
 <p align="center"><a href="docs/media/pasala-demo.mp4">Watch the video (MP4)</a></p>
+
+> [!TIP]
+> **Are you an AI agent (Claude, Codex, Cursor…)?** Read [`AGENT_INSTALL.md`](AGENT_INSTALL.md): what to ask your
+> user and how to install Pasala on their computer (macOS, Windows, Linux) and phones (Android by USB or without a
+> cable, iPhone with Xcode), pair them and connect yourself over MCP.
 
 ## What it does
 
