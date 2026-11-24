@@ -39,6 +39,10 @@ data class Peer(
 @Serializable
 data class Settings(
     val askBeforeReceiving: Boolean = false,
+    /** Device last chosen to send a text to. */
+    val lastTextPeer: String? = null,
+    /** The person said "Not now" to the background card on Home. */
+    val backgroundCardDismissed: Boolean = false,
 )
 
 @Serializable
@@ -57,6 +61,8 @@ data class HistoryItem(
     val thumbPath: String? = null,
     /** For sent items: name of the destination collection, if one was chosen. */
     val collection: String? = null,
+    /** Text items (mime [TEXT_MIME]): a short preview; the full text lives in [TextStore]. */
+    val text: String? = null,
     val ok: Boolean = true,
 )
 
@@ -141,3 +147,10 @@ data class OkResponse(val ok: Boolean)
 
 @Serializable
 data class ErrorResponse(val error: String)
+
+/** `POST /v1/text` (protocol § text). */
+@Serializable
+data class TextRequest(val id: String, val text: String)
+
+const val TEXT_MIME = "text/x-pasala-snippet"
+const val TEXT_MAX_BYTES = 1 shl 20

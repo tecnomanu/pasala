@@ -1,8 +1,10 @@
 .DS_Store
 *.log
-mac/.build/
-mac/build/
-mac/.swiftpm/
+apple/.build/
+apple/build/
+apple/.swiftpm/
+apple/iOS/**/xcuserdata/
+apple/iOS/**/*.xcworkspace/xcuserdata/
 android/build/
 android/app/build/
 android/.gradle/

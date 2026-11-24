@@ -69,6 +69,21 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.tecnomanu.pasala.R
+import androidx.compose.material.icons.rounded.BatteryChargingFull
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.tecnomanu.pasala.service.Background
+import com.tecnomanu.pasala.ui.components.GradientButton
+import com.tecnomanu.pasala.ui.components.SoftButton
+import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.FormatQuote
+import com.tecnomanu.pasala.core.Clip
+import com.tecnomanu.pasala.data.TEXT_MIME
+import com.tecnomanu.pasala.data.TextStore
+import com.tecnomanu.pasala.service.Notifications
+import com.tecnomanu.pasala.ui.send.QuoteBlock
+import com.tecnomanu.pasala.ui.send.TextActivity
 import com.tecnomanu.pasala.core.Format
 import com.tecnomanu.pasala.core.Live
 import com.tecnomanu.pasala.core.Outgoing
@@ -111,6 +126,11 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val c = P.c
 
+    var exempt by remember { mutableStateOf(true) }
+    LifecycleResumeEffect(Unit) {
+        exempt = Background.isExempt(context)
+        onPauseOrDispose { }
+    }
     var pickFor by remember { mutableStateOf<Peer?>(null) }
     var sheetFor by remember { mutableStateOf<Peer?>(null) }
     var renaming by remember { mutableStateOf<Peer?>(null) }
@@ -140,8 +160,8 @@ fun HomeScreen(
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
                     BrandMark(44.dp, 15.dp)
                     Spacer(Modifier.width(12.dp))
-                    Text("Pasala", style = MaterialTheme.typography.headlineMedium, color = c.text, modifier = Modifier.weight(1f))
-                    IconButton(onClick = onSettings) { Icon(Icons.Rounded.Tune, "Ajustes", tint = c.text) }
+                    Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, color = c.text, modifier = Modifier.weight(1f))
+                    IconButton(onClick = onSettings) { Icon(Icons.Rounded.Tune, stringResource(R.string.cd_settings), tint = c.text) }
                 }
             }
             item(key = "status") {
@@ -154,9 +174,30 @@ fun HomeScreen(
                 ) {
                     if (port > 0) PulseDot(c.success) else Box(Modifier.size(20.dp))
                     Text(
-                        if (port > 0) "Lista para recibir · ${state.identity?.name}" else "Preparando…",
+                        if (port > 0) stringResource(R.string.status_ready, state.identity?.name.orEmpty()) else stringResource(R.string.status_starting),
                         style = MaterialTheme.typography.bodySmall, color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
+                }
+            }
+
+            if (state.peers.isNotEmpty()) {
+                item(key = "send-clip") {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(top = 2.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(c.surface)
+                            .border(1.dp, c.outline, RoundedCornerShape(50))
+                            .clickable { context.startActivity(TextActivity.fromClipboard(context)) }
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                    ) {
+                        Icon(Icons.Rounded.ContentPaste, null, tint = Orange, modifier = Modifier.size(18.dp))
+                        Text(
+                            stringResource(R.string.home_send_clip), style = MaterialTheme.typography.titleSmall, color = c.text,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
                 }
             }
 
@@ -165,16 +206,27 @@ fun HomeScreen(
             }
 
             item(key = "devices-label") {
-                SectionLabel("Tus dispositivos", Modifier.padding(top = 14.dp)) {
+                SectionLabel(stringResource(R.string.home_devices), Modifier.padding(top = 14.dp)) {
                     if (state.peers.isNotEmpty()) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onAddDevice).padding(horizontal = 10.dp, vertical = 4.dp),
                         ) {
                             Icon(Icons.Rounded.Add, null, tint = Orange, modifier = Modifier.size(16.dp))
-                            Text("Sumar", style = MaterialTheme.typography.labelMedium, color = Orange)
+                            Text(stringResource(R.string.home_add), style = MaterialTheme.typography.labelMedium, color = Orange)
                         }
                     }
+                }
+            }
+
+            // Only once there is someone to receive from, never on first launch.
+            if (state.peers.isNotEmpty() && !exempt && !state.settings.backgroundCardDismissed) {
+                item(key = "background-card") {
+                    BackgroundCard(
+                        onAllow = { Background.open(context) },
+                        onLater = { Store.dismissBackgroundCard() },
+                        modifier = Modifier.animateItem(),
+                    )
                 }
             }
 
@@ -193,24 +245,28 @@ fun HomeScreen(
                 }
             }
 
-            item(key = "activity-label") { SectionLabel("Actividad", Modifier.padding(top = 18.dp)) }
+            item(key = "activity-label") { SectionLabel(stringResource(R.string.home_activity), Modifier.padding(top = 18.dp)) }
             if (state.history.isEmpty()) {
                 item(key = "empty-history") {
                     PasalaCard(Modifier.fillMaxWidth()) {
                         EmptyNote(
-                            "Todavía no pasó nada",
-                            "Compartí una foto o un archivo y elegí Pasala, o tocá uno de tus dispositivos para mandarle algo.",
+                            stringResource(R.string.home_empty_title),
+                            stringResource(R.string.home_empty_body),
                         )
                     }
                 }
             } else {
                 items(state.history.take(60), key = { "h-" + it.id }) { h ->
+                    if (h.mime == TEXT_MIME) {
+                        TextHistoryRow(h, Modifier.animateItem())
+                        return@items
+                    }
                     HistoryRow(h, Modifier.animateItem()) {
                         if (h.direction == "in" && h.uri != null) {
                             val view = Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(h.uri), h.mime)
                                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             try { context.startActivity(view) } catch (e: ActivityNotFoundException) {
-                                Toast.makeText(context, "No hay ninguna app para abrir este archivo", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, R.string.toast_no_app, Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
@@ -222,17 +278,17 @@ fun HomeScreen(
     sheetFor?.let { peer ->
         ModalBottomSheet(onDismissRequest = { sheetFor = null }, containerColor = c.surface) {
             Column(Modifier.padding(start = 20.dp, end = 20.dp, bottom = 28.dp)) {
-                Text("Pasarle a ${peer.displayName}", style = MaterialTheme.typography.headlineSmall, color = c.text)
+                Text(stringResource(R.string.sheet_title, peer.displayName), style = MaterialTheme.typography.headlineSmall, color = c.text)
                 Text(
-                    if (online[peer.id] == true) "Está en línea ahora." else "Ahora no lo encontramos; igual probamos al mandar.",
+                    stringResource(if (online[peer.id] == true) R.string.sheet_online else R.string.sheet_offline),
                     style = MaterialTheme.typography.bodyMedium, color = c.muted, modifier = Modifier.padding(top = 4.dp, bottom = 18.dp),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    PickOption("Fotos y videos", Icons.Rounded.PhotoLibrary, Modifier.weight(1f)) {
+                    PickOption(stringResource(R.string.pick_media), Icons.Rounded.PhotoLibrary, Modifier.weight(1f)) {
                         pickFor = peer; sheetFor = null
                         pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
                     }
-                    PickOption("Archivos", Icons.Rounded.Folder, Modifier.weight(1f)) {
+                    PickOption(stringResource(R.string.pick_files), Icons.Rounded.Folder, Modifier.weight(1f)) {
                         pickFor = peer; sheetFor = null
                         pickDocs.launch(arrayOf("*/*"))
                     }
@@ -263,6 +319,38 @@ private fun PickOption(text: String, icon: ImageVector, modifier: Modifier, onCl
 }
 
 @Composable
+private fun BackgroundCard(onAllow: () -> Unit, onLater: () -> Unit, modifier: Modifier = Modifier) {
+    val c = P.c
+    Column(
+        modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(c.surface)
+            .border(1.dp, c.success.copy(alpha = 0.45f), RoundedCornerShape(24.dp))
+            .padding(20.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(c.success.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.BatteryChargingFull, null, tint = c.success, modifier = Modifier.size(24.dp))
+            }
+            Text(
+                stringResource(R.string.battery_title), style = MaterialTheme.typography.titleMedium, color = c.text,
+                modifier = Modifier.padding(start = 14.dp).weight(1f),
+            )
+        }
+        Text(
+            stringResource(R.string.battery_body), style = MaterialTheme.typography.bodyMedium, color = c.muted,
+            modifier = Modifier.padding(top = 10.dp),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 16.dp)) {
+            SoftButton(stringResource(R.string.battery_later), Modifier.weight(1f), onLater)
+            GradientButton(stringResource(R.string.battery_allow), Modifier.weight(1f).height(52.dp), onClick = onAllow)
+        }
+    }
+}
+
+@Composable
 private fun AddFirstDeviceCard(onAdd: () -> Unit) {
     val c = P.c
     Column(
@@ -277,13 +365,13 @@ private fun AddFirstDeviceCard(onAdd: () -> Unit) {
         Box(Modifier.size(56.dp).clip(RoundedCornerShape(18.dp)).background(BrandGradient), contentAlignment = Alignment.Center) {
             Icon(Icons.Rounded.QrCode2, null, tint = Color.White, modifier = Modifier.size(30.dp))
         }
-        Text("Sumá tu primer dispositivo", style = MaterialTheme.typography.headlineSmall, color = c.text, modifier = Modifier.padding(top = 18.dp))
+        Text(stringResource(R.string.first_title), style = MaterialTheme.typography.headlineSmall, color = c.text, modifier = Modifier.padding(top = 18.dp))
         Text(
-            "Escaneá el código de tu Mac o de otro teléfono con Pasala, o mostrá el tuyo. Se hace una sola vez.",
+            stringResource(R.string.first_body),
             style = MaterialTheme.typography.bodyMedium, color = c.muted, modifier = Modifier.padding(top = 6.dp),
         )
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 16.dp)) {
-            Text("Empezar", style = MaterialTheme.typography.titleSmall, color = Orange)
+            Text(stringResource(R.string.first_cta), style = MaterialTheme.typography.titleSmall, color = Orange)
             Icon(Icons.Rounded.ArrowOutward, null, tint = Orange, modifier = Modifier.size(18.dp).padding(start = 4.dp))
         }
     }
@@ -315,7 +403,7 @@ private fun PeerCard(
         Column(Modifier.weight(1f).padding(start = 14.dp)) {
             Text(peer.displayName, style = MaterialTheme.typography.titleMedium, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                if (online) "En línea" else "Visto ${Format.ago(peer.lastSeen)}",
+                if (online) stringResource(R.string.online) else Format.seen(LocalContext.current, peer.lastSeen),
                 style = MaterialTheme.typography.bodySmall,
                 color = if (online) c.success else c.muted,
                 modifier = Modifier.padding(top = 2.dp),
@@ -325,13 +413,13 @@ private fun PeerCard(
             Modifier.size(40.dp).clip(CircleShape).background(if (online) BrandGradient else Brushes.solid(c.surfaceHigh)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Rounded.ArrowOutward, "Mandar", tint = if (online) Color.White else c.muted, modifier = Modifier.size(20.dp))
+            Icon(Icons.Rounded.ArrowOutward, stringResource(R.string.cd_send), tint = if (online) Color.White else c.muted, modifier = Modifier.size(20.dp))
         }
         Box {
-            IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "Opciones", tint = c.muted) }
+            IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.cd_options), tint = c.muted) }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.surfaceHigh) {
-                DropdownMenuItem(text = { Text("Cambiar nombre") }, onClick = { menu = false; onRename() })
-                DropdownMenuItem(text = { Text("Desvincular", color = c.danger) }, onClick = { menu = false; onUnpair() })
+                DropdownMenuItem(text = { Text(stringResource(R.string.menu_rename)) }, onClick = { menu = false; onRename() })
+                DropdownMenuItem(text = { Text(stringResource(R.string.menu_unpair), color = c.danger) }, onClick = { menu = false; onUnpair() })
             }
         }
     }
@@ -357,12 +445,12 @@ private fun IncomingCard(inc: Live.Incoming, modifier: Modifier = Modifier) {
             }
             Column(Modifier.weight(1f).padding(start = 14.dp)) {
                 Text(
-                    if (inc.count > 1) "Llegando ${inc.index + 1} de ${inc.count} · ${inc.peerName}" else "Llegando de ${inc.peerName}",
+                    if (inc.count > 1) stringResource(R.string.incoming_many, inc.index + 1, inc.count, inc.peerName) else stringResource(R.string.incoming_one, inc.peerName),
                     style = MaterialTheme.typography.bodySmall, color = c.muted,
                 )
                 Text(inc.name, style = MaterialTheme.typography.titleMedium, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    "${Format.size(inc.received)} de ${Format.size(inc.size)}",
+                    stringResource(R.string.size_of, Format.size(inc.received), Format.size(inc.size)),
                     style = MaterialTheme.typography.bodySmall, color = c.muted,
                 )
             }
@@ -390,8 +478,8 @@ private fun HistoryRow(h: HistoryItem, modifier: Modifier = Modifier, onClick: (
         Column(Modifier.weight(1f).padding(start = 14.dp)) {
             Text(h.name, style = MaterialTheme.typography.titleSmall, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                (if (h.direction == "in") "De ${h.peerName}" else "A ${h.peerName}") +
-                    (h.collection?.let { " · $it" } ?: "") + " · ${Format.size(h.size)} · ${Format.ago(h.time)}",
+                stringResource(if (h.direction == "in") R.string.history_from else R.string.history_to, h.peerName) +
+                    (h.collection?.let { " · $it" } ?: "") + " · ${Format.size(h.size)} · ${Format.ago(LocalContext.current, h.time)}",
                 style = MaterialTheme.typography.bodySmall, color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 2.dp),
             )
@@ -404,6 +492,55 @@ private fun HistoryRow(h: HistoryItem, modifier: Modifier = Modifier, onClick: (
                 if (h.direction == "in") Icons.Rounded.SouthWest else Icons.Rounded.ArrowOutward, null,
                 tint = if (h.direction == "in") c.success else Orange, modifier = Modifier.size(16.dp),
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TextHistoryRow(h: HistoryItem, modifier: Modifier = Modifier) {
+    val c = P.c
+    val context = LocalContext.current
+    var menu by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    // Up to 1 MB on disk: read it off the main thread, then act.
+    fun withFull(block: (String) -> Unit) = scope.launch {
+        val t = withContext(Dispatchers.IO) { TextStore.load(context, h.id) } ?: h.text.orEmpty()
+        block(t)
+    }
+    Box(modifier) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .combinedClickable(
+                    onClick = {
+                        withFull { Clip.copy(context, it) }
+                        Notifications.cancelText(context, h.id)
+                    },
+                    onLongClick = { menu = true },
+                )
+                .padding(vertical = 6.dp, horizontal = 4.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(if (h.direction == "in") R.string.history_from else R.string.history_to, h.peerName) +
+                        " · ${Format.ago(context, h.time)} · " + stringResource(R.string.text_tap_hint),
+                    style = MaterialTheme.typography.bodySmall, color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+            }
+            QuoteBlock(h.text.orEmpty(), maxLines = 3, modifier = Modifier.padding(top = 8.dp))
+        }
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = c.surfaceHigh) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.action_copy)) }, onClick = {
+                menu = false
+                withFull { Clip.copy(context, it) }
+            })
+            DropdownMenuItem(text = { Text(stringResource(R.string.action_share)) }, onClick = {
+                menu = false
+                withFull { Clip.share(context, it) }
+            })
         }
     }
 }

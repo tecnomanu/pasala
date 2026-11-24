@@ -23,6 +23,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.tecnomanu.pasala.R
 import com.tecnomanu.pasala.core.Format
 import com.tecnomanu.pasala.core.Live
 import com.tecnomanu.pasala.core.Receiver
@@ -72,15 +75,14 @@ fun PasalaDialog(
 fun PendingOfferDialog() {
     val offers by Live.pendingOffers.collectAsState()
     val o = offers.firstOrNull() ?: return
-    val what = if (o.count == 1) "1 archivo" else "${o.count} archivos"
     PasalaDialog(
-        title = "${o.peerName} te quiere pasar $what",
-        body = "Son ${Format.size(o.totalSize)}. Si no contestás en un minuto, no se recibe nada.",
+        title = pluralStringResource(R.plurals.offer_title, o.count, o.peerName, o.count),
+        body = stringResource(R.string.offer_body, Format.size(o.totalSize)),
         onDismiss = {},
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            SoftButton("Rechazar", Modifier.weight(1f)) { Receiver.decide(o.batch, false) }
-            GradientButton("Aceptar", Modifier.weight(1f)) { Receiver.decide(o.batch, true) }
+            SoftButton(stringResource(R.string.action_decline), Modifier.weight(1f)) { Receiver.decide(o.batch, false) }
+            GradientButton(stringResource(R.string.action_accept), Modifier.weight(1f)) { Receiver.decide(o.batch, true) }
         }
     }
 }
@@ -89,8 +91,8 @@ fun PendingOfferDialog() {
 fun RenameDialog(peer: Peer, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf(peer.displayName) }
     PasalaDialog(
-        title = "Cambiar nombre",
-        body = "Solo cambia cómo lo ves en este teléfono.",
+        title = stringResource(R.string.rename_title),
+        body = stringResource(R.string.rename_body),
         onDismiss = onDismiss,
         content = {
             OutlinedTextField(
@@ -102,8 +104,8 @@ fun RenameDialog(peer: Peer, onDismiss: () -> Unit) {
         },
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            SoftButton("Cancelar", Modifier.weight(1f), onDismiss)
-            GradientButton("Guardar", Modifier.weight(1f)) {
+            SoftButton(stringResource(R.string.action_cancel), Modifier.weight(1f), onDismiss)
+            GradientButton(stringResource(R.string.action_save), Modifier.weight(1f)) {
                 val n = text.trim()
                 Store.updatePeer(peer.id) { it.copy(localName = n.takeIf { v -> v.isNotEmpty() && v != it.name }) }
                 onDismiss()
@@ -115,13 +117,13 @@ fun RenameDialog(peer: Peer, onDismiss: () -> Unit) {
 @Composable
 fun UnpairDialog(peer: Peer, onDismiss: () -> Unit) {
     PasalaDialog(
-        title = "¿Desvincular ${peer.displayName}?",
-        body = "Van a dejar de poder pasarse archivos. Para volver a hacerlo, escaneen el código otra vez.",
+        title = stringResource(R.string.unpair_title, peer.displayName),
+        body = stringResource(R.string.unpair_body),
         onDismiss = onDismiss,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            SoftButton("Cancelar", Modifier.weight(1f), onDismiss)
-            GradientButton("Desvincular", Modifier.weight(1f)) {
+            SoftButton(stringResource(R.string.action_cancel), Modifier.weight(1f), onDismiss)
+            GradientButton(stringResource(R.string.action_unpair), Modifier.weight(1f)) {
                 unpair(peer)
                 onDismiss()
             }

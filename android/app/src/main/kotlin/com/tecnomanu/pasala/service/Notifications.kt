@@ -20,6 +20,7 @@ object Notifications {
     const val CH_TRANSFER = "transfer"
     const val CH_REQUEST = "request"
     const val CH_DONE = "done"
+    const val CH_TEXT = "text"
 
     const val ID_SERVICE = 1
     const val ID_RECEIVING = 2
@@ -32,19 +33,22 @@ object Notifications {
         val nm = context.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannels(
             listOf(
-                NotificationChannel(CH_READY, "Lista para recibir", NotificationManager.IMPORTANCE_MIN).apply {
-                    description = "Aviso fijo mientras Pasala puede recibir archivos"
+                NotificationChannel(CH_READY, context.getString(R.string.ch_ready_name), NotificationManager.IMPORTANCE_MIN).apply {
+                    description = context.getString(R.string.ch_ready_desc)
                     setShowBadge(false)
                 },
-                NotificationChannel(CH_TRANSFER, "Archivos en camino", NotificationManager.IMPORTANCE_LOW).apply {
-                    description = "Progreso de lo que estás recibiendo"
+                NotificationChannel(CH_TRANSFER, context.getString(R.string.ch_transfer_name), NotificationManager.IMPORTANCE_LOW).apply {
+                    description = context.getString(R.string.ch_transfer_desc)
                     setShowBadge(false)
                 },
-                NotificationChannel(CH_REQUEST, "Pedidos para recibir", NotificationManager.IMPORTANCE_HIGH).apply {
-                    description = "Cuando otro dispositivo te quiere pasar archivos y pediste confirmar"
+                NotificationChannel(CH_REQUEST, context.getString(R.string.ch_request_name), NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = context.getString(R.string.ch_request_desc)
                 },
-                NotificationChannel(CH_DONE, "Archivos recibidos", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    description = "Aviso cuando terminó de llegar algo"
+                NotificationChannel(CH_DONE, context.getString(R.string.ch_done_name), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = context.getString(R.string.ch_done_desc)
+                },
+                NotificationChannel(CH_TEXT, context.getString(R.string.ch_text_name), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = context.getString(R.string.ch_text_desc)
                 },
             )
         )
@@ -59,8 +63,8 @@ object Notifications {
         NotificationCompat.Builder(context, CH_READY)
             .setSmallIcon(R.drawable.ic_stat_mark)
             .setColor(ACCENT)
-            .setContentTitle("Lista para recibir")
-            .setContentText("Tus dispositivos te pueden pasar archivos")
+            .setContentTitle(context.getString(R.string.notif_ready_title))
+            .setContentText(context.getString(R.string.notif_ready_text))
             .setOngoing(true)
             .setSilent(true)
             .setShowWhen(false)
@@ -80,7 +84,8 @@ object Notifications {
 
     fun receiving(context: Context, from: String, name: String, index: Int, count: Int, done: Long, total: Long) {
         val pct = if (total > 0) ((done * 100) / total).toInt() else 0
-        val title = if (count > 1) "Recibiendo ${index + 1} de $count de $from" else "Recibiendo de $from"
+        val title = if (count > 1) context.getString(R.string.notif_receiving_many, index + 1, count, from)
+        else context.getString(R.string.notif_receiving_one, from)
         post(
             context, ID_RECEIVING,
             NotificationCompat.Builder(context, CH_TRANSFER)
@@ -100,19 +105,46 @@ object Notifications {
     fun cancelReceiving(context: Context) = NotificationManagerCompat.from(context).cancel(ID_RECEIVING)
 
     fun received(context: Context, from: String, count: Int, lastName: String) {
-        val text = if (count == 1) lastName else "$count archivos"
+        val text = if (count == 1) lastName else context.resources.getQuantityString(R.plurals.files_count, count, count)
         post(
             context, ID_DONE,
             NotificationCompat.Builder(context, CH_DONE)
                 .setSmallIcon(R.drawable.ic_stat_mark)
                 .setColor(ACCENT)
-                .setContentTitle("Llegó de $from")
+                .setContentTitle(context.getString(R.string.notif_received_title, from))
                 .setContentText(text)
                 .setAutoCancel(true)
                 .setContentIntent(openApp(context))
                 .build(),
         )
     }
+
+    // Above the offer range (ID_OFFER_BASE + 0..0x7fff) so a text never replaces a pending request.
+    fun textId(itemId: String) = 40_000 + (itemId.hashCode() and 0x7fff)
+
+    fun textReady(context: Context, itemId: String, from: String, preview: String) {
+        val copy = PendingIntent.getBroadcast(
+            context, textId(itemId),
+            Intent(context, CopyTextReceiver::class.java).putExtra(CopyTextReceiver.EXTRA_ITEM, itemId),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        post(
+            context, textId(itemId),
+            NotificationCompat.Builder(context, CH_TEXT)
+                .setSmallIcon(R.drawable.ic_stat_mark)
+                .setColor(ACCENT)
+                .setContentTitle(context.getString(R.string.text_ready_title))
+                .setContentText(preview)
+                .setSubText(context.getString(R.string.history_from, from))
+                .setStyle(NotificationCompat.BigTextStyle().bigText(preview))
+                .setAutoCancel(true)
+                .setContentIntent(openApp(context))
+                .addAction(0, context.getString(R.string.action_copy), copy)
+                .build(),
+        )
+    }
+
+    fun cancelText(context: Context, itemId: String) = NotificationManagerCompat.from(context).cancel(textId(itemId))
 
     fun offerId(batch: String) = ID_OFFER_BASE + (batch.hashCode() and 0x7fff)
 
@@ -124,21 +156,20 @@ object Notifications {
                 .putExtra(OfferActionReceiver.EXTRA_ACCEPT, accept),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val what = if (count == 1) "1 archivo" else "$count archivos"
         post(
             context, offerId(batch),
             NotificationCompat.Builder(context, CH_REQUEST)
                 .setSmallIcon(R.drawable.ic_stat_mark)
                 .setColor(ACCENT)
-                .setContentTitle("$from te quiere pasar $what")
-                .setContentText("$sizeText · Tenés un minuto para decidir")
+                .setContentTitle(context.resources.getQuantityString(R.plurals.offer_title, count, from, count))
+                .setContentText(context.getString(R.string.notif_offer_text, sizeText))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setTimeoutAfter(60_000)
                 .setAutoCancel(true)
                 .setContentIntent(openApp(context))
-                .addAction(0, "Rechazar", action(false))
-                .addAction(0, "Aceptar", action(true))
+                .addAction(0, context.getString(R.string.action_decline), action(false))
+                .addAction(0, context.getString(R.string.action_accept), action(true))
                 .build(),
         )
     }

@@ -85,10 +85,17 @@ object Store {
     fun removePeer(id: String) = mutate { s -> s.copy(peers = s.peers.filterNot { it.id == id }) }
 
     fun addHistory(item: HistoryItem) = mutate { s ->
-        s.copy(history = (listOf(item) + s.history).take(MAX_HISTORY))
+        val all = listOf(item) + s.history
+        // Texts keep their full body in their own file: drop it with the entry.
+        all.drop(MAX_HISTORY).filter { it.mime == TEXT_MIME }.forEach { File(file.parentFile, "texts/${it.id}.txt").delete() }
+        s.copy(history = all.take(MAX_HISTORY))
     }
 
     fun setName(name: String) = mutate { s -> s.copy(identity = s.identity!!.copy(name = name.trim().ifBlank { s.identity.name })) }
+
+    fun setLastTextPeer(id: String) = mutate { s -> s.copy(settings = s.settings.copy(lastTextPeer = id)) }
+
+    fun dismissBackgroundCard() = mutate { s -> s.copy(settings = s.settings.copy(backgroundCardDismissed = true)) }
 
     fun setAskBeforeReceiving(on: Boolean) = mutate { s -> s.copy(settings = s.settings.copy(askBeforeReceiving = on)) }
 

@@ -11,10 +11,13 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN/Pasala" "$APP/Contents/MacOS/Pasala"
 cp "$BIN/pasala-mcp" "$APP/Contents/MacOS/pasala-mcp"
 [ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns "$APP/Contents/Resources/"
+cp -R Localization/*.lproj "$APP/Contents/Resources/"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleLocalizations</key><array><string>en</string><string>es</string></array>
   <key>CFBundleIdentifier</key><string>com.tecnomanu.pasala</string>
   <key>CFBundleName</key><string>Pasala</string>
   <key>CFBundleDisplayName</key><string>Pasala</string>
@@ -28,6 +31,21 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>NSHighResolutionCapable</key><true/>
   <key>NSLocalNetworkUsageDescription</key><string>Pasala usa tu red para recibir y mandar archivos a tus dispositivos vinculados.</string>
   <key>NSBonjourServices</key><array><string>_pasala._tcp</string></array>
+  <key>NSServices</key>
+  <array><dict>
+    <key>NSMenuItem</key><dict><key>default</key><string>Pasar con Pasala</string></dict>
+    <key>NSMessage</key><string>sendText</string>
+    <key>NSPortName</key><string>Pasala</string>
+    <key>NSSendTypes</key><array><string>NSStringPboardType</string><string>public.utf8-plain-text</string></array>
+    <key>NSRequiredContext</key><dict/>
+  </dict>
+  <dict>
+    <key>NSMenuItem</key><dict><key>default</key><string>Enviar con Pasala</string></dict>
+    <key>NSMessage</key><string>sendFiles</string>
+    <key>NSPortName</key><string>Pasala</string>
+    <key>NSSendFileTypes</key><array><string>public.item</string></array>
+    <key>NSRequiredContext</key><dict/>
+  </dict></array>
 </dict></plist>
 PLIST
 codesign --force --deep --sign - "$APP" >/dev/null

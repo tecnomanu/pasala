@@ -1,70 +1,84 @@
 import Foundation
 import Network
-import AppKit
+#if canImport(UIKit)
+import UIKit
+#endif
 import PasalaCore
 
-struct TransferItem: Identifiable, Hashable {
-    let id = UUID()
-    var name: String
-    var size: Int64
-    var mime: String
-    var done: Int64 = 0
-    var finished = false
-    var failed = false
-    var url: URL?
-    var progress: Double { size > 0 ? min(1, Double(done) / Double(size)) : (finished ? 1 : 0) }
+public struct TransferItem: Identifiable, Hashable {
+    public let id = UUID()
+    public var name: String
+    public var size: Int64
+    public var mime: String
+    public var done: Int64 = 0
+    public var finished = false
+    public var failed = false
+    public var url: URL?
+    public var progress: Double { size > 0 ? min(1, Double(done) / Double(size)) : (finished ? 1 : 0) }
 }
 
-struct Transfer: Identifiable {
-    enum Direction { case incoming, outgoing }
-    enum State { case running, done, failed(String) }
-    let id: String            // batch
-    let direction: Direction
-    let peerId: String
-    var peerName: String
-    var items: [TransferItem]
-    var collection: String? = nil
-    var state: State = .running
-    var finishedAt: Date?
-    var totalBytes: Int64 { items.reduce(0) { $0 + $1.size } }
-    var doneBytes: Int64 { items.reduce(0) { $0 + $1.done } }
-    var progress: Double { totalBytes > 0 ? Double(doneBytes) / Double(totalBytes) : 0 }
-    var isRunning: Bool { if case .running = state { return true }; return false }
+public struct Transfer: Identifiable {
+    public enum Direction { case incoming, outgoing }
+    public enum State { case running, done, failed(String) }
+    public let id: String            // batch
+    public let direction: Direction
+    public let peerId: String
+    public var peerName: String
+    public var items: [TransferItem]
+    public var collection: String? = nil
+    public var state: State = .running
+    public var finishedAt: Date?
+    public var totalBytes: Int64 { items.reduce(0) { $0 + $1.size } }
+    public var doneBytes: Int64 { items.reduce(0) { $0 + $1.done } }
+    public var progress: Double { totalBytes > 0 ? Double(doneBytes) / Double(totalBytes) : 0 }
+    public var isRunning: Bool { if case .running = state { return true }; return false }
 }
 
-struct PendingOffer: Identifiable {
-    let id: String
-    let peerName: String
-    let platform: String
-    let files: [(name: String, size: Int64, mime: String)]
-    var totalBytes: Int64 { files.reduce(0) { $0 + $1.size } }
+public struct PendingOffer: Identifiable {
+    public let id: String
+    public let peerName: String
+    public let platform: String
+    public let files: [(name: String, size: Int64, mime: String)]
+    public var totalBytes: Int64 { files.reduce(0) { $0 + $1.size } }
 }
 
 @MainActor
-final class Engine: ObservableObject {
-    static let shared = Engine()
+public final class Engine: ObservableObject {
+    /// Which platform this process is. Set before first touching `shared`.
+    public nonisolated(unsafe) static var platform: String = {
+        #if os(macOS)
+        return "mac"
+        #else
+        return "ios"
+        #endif
+    }()
+    public static let shared = Engine()
+    /// Called on the main actor after a received file is saved (the iPhone app copies photos and videos to Photos).
+    public var onFileReceived: ((URL, String) -> Void)?
 
-    let db: PasalaDB
-    let server = HTTPServer()
-    let deviceId: String
-    @Published var deviceName: String
-    @Published var port: Int = 47820
-    @Published var addrs: [String] = []
+    public let db: PasalaDB
+    public let server = HTTPServer()
+    public let deviceId: String
+    @Published public var deviceName: String
+    @Published public var port: Int = 47820
+    @Published public var addrs: [String] = []
 
-    @Published var peers: [Peer] = []
-    @Published var online: Set<String> = []
-    @Published var recent: [FileRecord] = []
-    @Published var transfers: [Transfer] = []
-    @Published var offers: [PendingOffer] = []
-    @Published var pairCode: String = ""
-    @Published var pairExpires: Date = .now
-    @Published var justPaired: Peer?
-    @Published var inbox: URL
-    @Published var askBeforeReceiving: Bool
-    @Published var lastError: String?
-    @Published var collections: [FileCollection] = []
+    @Published public var peers: [Peer] = []
+    @Published public var online: Set<String> = []
+    @Published public var recent: [FileRecord] = []
+    @Published public var transfers: [Transfer] = []
+    @Published public var offers: [PendingOffer] = []
+    /// The last text that arrived; the apps show it as "ready to copy" (never written to the clipboard by itself).
+    @Published public var lastText: FileRecord?
+    @Published public var pairCode: String = ""
+    @Published public var pairExpires: Date = .now
+    @Published public var justPaired: Peer?
+    @Published public var inbox: URL
+    @Published public var askBeforeReceiving: Bool
+    @Published public var lastError: String?
+    @Published public var collections: [FileCollection] = []
     /// Collections each paired device offers, from its latest hello reply.
-    @Published var peerCollections: [String: [RemoteCollection]] = [:]
+    @Published public var peerCollections: [String: [RemoteCollection]] = [:]
 
     private var codes: [String: Date] = [:]
     private var acceptedBatches: [String: String] = [:]   // batch -> peerId
@@ -72,7 +86,7 @@ final class Engine: ObservableObject {
     private var offerWaiters: [String: CheckedContinuation<Bool, Never>] = [:]
     private var discovered: [String: String] = [:]          // peerId -> "ip"
     private var browser: NWBrowser?
-    let localToken: String
+    public let localToken: String
     private lazy var session: URLSession = {
         let c = URLSessionConfiguration.ephemeral
         c.waitsForConnectivity = false
@@ -81,12 +95,22 @@ final class Engine: ObservableObject {
         return URLSession(configuration: c)
     }()
 
+    static var defaultName: String {
+        #if os(macOS)
+        return Host.current().localizedName ?? "Mac"
+        #else
+        return UIDevice.current.name
+        #endif
+    }
+
     private init() {
         db = try! PasalaDB()
         if let id = db.setting("device_id") { deviceId = id } else {
             deviceId = UUID().uuidString.lowercased(); db.setSetting("device_id", deviceId)
         }
-        deviceName = db.setting("device_name") ?? (Host.current().localizedName ?? "Mac")
+        deviceName = db.setting("device_name") ?? Self.defaultName
+        port = Int(db.setting("port") ?? "") ?? 47820
+        addrs = NetInfo.addresses()
         inbox = db.setting("inbox").map { URL(fileURLWithPath: $0) } ?? PasalaPaths.defaultInbox
         askBeforeReceiving = db.setting("ask") == "1"
         if let t = try? String(contentsOf: PasalaPaths.localTokenURL, encoding: .utf8), !t.isEmpty { localToken = t } else {
@@ -101,7 +125,7 @@ final class Engine: ObservableObject {
 
     // MARK: lifecycle
 
-    func start() {
+    public func start() {
         try? FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
         server.handler = { [weak self] req, body in
             guard let self else { return .error("gone", 500) }
@@ -111,7 +135,7 @@ final class Engine: ObservableObject {
             try server.start(preferred: 47820, serviceName: deviceName, txt: ["id": deviceId])
             port = Int(server.port)
         } catch {
-            lastError = "No pude abrir el puerto para recibir: \(error.localizedDescription)"
+            lastError = String(localized: "No pude abrir el puerto para recibir: \(error.localizedDescription)")
         }
         addrs = NetInfo.addresses()
         db.setSetting("port", String(port))
@@ -128,45 +152,45 @@ final class Engine: ObservableObject {
         Task { await refreshOnline() }
     }
 
-    func reloadRecent() { recent = db.files(limit: 300) }
+    public func reloadRecent() { recent = db.files(limit: 300) }
 
     // MARK: settings
 
-    func setDeviceName(_ n: String) {
+    public func setDeviceName(_ n: String) {
         let t = n.trimmingCharacters(in: .whitespaces); guard !t.isEmpty else { return }
         deviceName = t; db.setSetting("device_name", t)
         Task { await refreshOnline() }
     }
-    func setInbox(_ u: URL) { inbox = u; db.setSetting("inbox", u.path) }
-    func setAsk(_ v: Bool) { askBeforeReceiving = v; db.setSetting("ask", v ? "1" : "0") }
-    func setFolder(_ u: URL?, for peer: Peer) {
+    public func setInbox(_ u: URL) { inbox = u; db.setSetting("inbox", u.path) }
+    public func setAsk(_ v: Bool) { askBeforeReceiving = v; db.setSetting("ask", v ? "1" : "0") }
+    public func setFolder(_ u: URL?, for peer: Peer) {
         var p = peer; p.folder = u?.path; db.savePeer(p); peers = db.peers()
     }
-    func rename(_ peer: Peer, to name: String) {
+    public func rename(_ peer: Peer, to name: String) {
         var p = peer; p.name = name; db.savePeer(p); peers = db.peers()
     }
 
     // MARK: collections
 
     @discardableResult
-    func addCollection(folder: URL, name: String? = nil) -> FileCollection {
+    public func addCollection(folder: URL, name: String? = nil) -> FileCollection {
         if let existing = collections.first(where: { $0.path == folder.path }) { return existing }
         let c = FileCollection(id: "c-" + Rand.base64url(bytes: 6), name: (name?.isEmpty == false ? name! : folder.lastPathComponent), path: folder.path)
         db.saveCollection(c); collections = db.collections()
         return c
     }
-    func renameCollection(_ c: FileCollection, to name: String) {
+    public func renameCollection(_ c: FileCollection, to name: String) {
         let t = name.trimmingCharacters(in: .whitespaces); guard !t.isEmpty else { return }
         var n = c; n.name = t; db.saveCollection(n); collections = db.collections()
     }
-    func moveCollection(_ c: FileCollection, to folder: URL) {
+    public func moveCollection(_ c: FileCollection, to folder: URL) {
         var n = c; n.path = folder.path; db.saveCollection(n); collections = db.collections()
     }
-    func removeCollection(_ c: FileCollection) { db.deleteCollection(c.id); collections = db.collections() }
+    public func removeCollection(_ c: FileCollection) { db.deleteCollection(c.id); collections = db.collections() }
 
     // MARK: pairing
 
-    func newPairCode() {
+    public func newPairCode() {
         let c = Rand.base64url(bytes: 16)
         codes = codes.filter { $0.value > .now }
         codes[c] = .now.addingTimeInterval(300)
@@ -177,28 +201,28 @@ final class Engine: ObservableObject {
         }
     }
 
-    var pairPayload: String {
-        let obj: [String: Any] = ["v": 1, "id": deviceId, "name": deviceName, "platform": "mac",
+    public var pairPayload: String {
+        let obj: [String: Any] = ["v": 1, "id": deviceId, "name": deviceName, "platform": Self.platform,
                                   "port": port, "addrs": addrs, "code": pairCode]
         let data = (try? JSONSerialization.data(withJSONObject: obj, options: [.sortedKeys])) ?? Data()
         return "pasala://pair?d=" + data.base64URL
     }
 
     /// Pair by pasting a code from another device (Mac ↔ Mac, or no camera at hand).
-    func pair(withPayload text: String) async -> String? {
+    public func pair(withPayload text: String) async -> String? {
         guard let comps = URLComponents(string: text.trimmingCharacters(in: .whitespacesAndNewlines)),
               let d = comps.queryItems?.first(where: { $0.name == "d" })?.value,
               let data = Data(base64URL: d),
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let code = obj["code"] as? String, let port = obj["port"] as? Int,
-              let hostAddrs = obj["addrs"] as? [String] else { return "Ese código no es de Pasala." }
-        let mine: [String: Any] = ["code": code, "id": deviceId, "name": deviceName, "platform": "mac", "port": self.port, "addrs": addrs]
+              let hostAddrs = obj["addrs"] as? [String] else { return String(localized: "Ese código no es de Pasala.") }
+        let mine: [String: Any] = ["code": code, "id": deviceId, "name": deviceName, "platform": Self.platform, "port": self.port, "addrs": addrs]
         for host in hostAddrs {
             var req = URLRequest(url: URL(string: "http://\(host):\(port)/v1/pair")!, timeoutInterval: 3)
             req.httpMethod = "POST"; req.setValue("application/json", forHTTPHeaderField: "Content-Type")
             req.httpBody = try? JSONSerialization.data(withJSONObject: mine)
             guard let (data, resp) = try? await session.data(for: req), let http = resp as? HTTPURLResponse else { continue }
-            if http.statusCode == 403 { return "El código venció. Generá uno nuevo en el otro dispositivo." }
+            if http.statusCode == 403 { return String(localized: "El código venció. Generá uno nuevo en el otro dispositivo.") }
             guard http.statusCode == 200, let r = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let id = r["id"] as? String, let secret = r["secret"] as? String else { continue }
             let p = Peer(id: id, name: r["name"] as? String ?? "Dispositivo", platform: r["platform"] as? String ?? "?",
@@ -207,10 +231,10 @@ final class Engine: ObservableObject {
             db.savePeer(p); peers = db.peers(); online.insert(id); justPaired = p
             return nil
         }
-        return "No encontré el otro dispositivo. ¿Está en la misma red o en Tailscale?"
+        return String(localized: "No encontré el otro dispositivo. ¿Está en la misma red o en Tailscale?")
     }
 
-    func unpair(_ peer: Peer) {
+    public func unpair(_ peer: Peer) {
         Task {
             if let host = await resolve(peer) {
                 var req = authed(peer, host: host, path: "/v1/unpair"); req.timeoutInterval = 3
@@ -225,7 +249,10 @@ final class Engine: ObservableObject {
     private nonisolated func handle(_ req: HTTPServer.Request, _ body: HTTPServer.Body) async -> HTTPServer.Response {
         let path = req.path.components(separatedBy: "?")[0]
         if req.method != "POST" && path != "/local/status" { return .error("method", 404) }
-        if path.hasPrefix("/local/") { return await handleLocal(path, req, body) }
+        if path.hasPrefix("/local/") {
+            guard Self.platform == "mac" else { return .error("not_found", 404) }
+            return await handleLocal(path, req, body)
+        }
         if path == "/v1/pair" { return await handlePair(body) }
         guard let peer = await authorize(req) else { return .error("unauthorized", 401) }
         switch path {
@@ -242,6 +269,7 @@ final class Engine: ObservableObject {
             }
         case "/v1/offer": return await handleOffer(peer, body)
         case "/v1/files": return await handleFile(peer, req, body)
+        case "/v1/text": return await handleText(peer, body)
         case "/v1/unpair":
             await MainActor.run { self.db.deletePeer(peer.id); self.peers = self.db.peers(); self.online.remove(peer.id) }
             return .json(["ok": true])
@@ -250,7 +278,7 @@ final class Engine: ObservableObject {
     }
 
     private func selfInfo() -> [String: Any] {
-        ["id": deviceId, "name": deviceName, "platform": "mac", "port": port, "addrs": addrs,
+        ["id": deviceId, "name": deviceName, "platform": Self.platform, "port": port, "addrs": addrs,
          "collections": collections.map { ["id": $0.id, "name": $0.name] }]
     }
 
@@ -317,7 +345,7 @@ final class Engine: ObservableObject {
         return .json(["accepted": accepted])
     }
 
-    func answerOffer(_ batch: String, accept: Bool) {
+    public func answerOffer(_ batch: String, accept: Bool) {
         offers.removeAll { $0.id == batch }
         offerWaiters.removeValue(forKey: batch)?.resume(returning: accept)
     }
@@ -358,6 +386,7 @@ final class Engine: ObservableObject {
             self.updateItem(batch, index: index, peer: peer, count: count) { $0.done = size; $0.finished = true; $0.url = dest; $0.name = dest.lastPathComponent }
             self.reloadRecent()
             self.finishIfDone(batch)
+            self.onFileReceived?(dest, mime)
         }
         return .json(["ok": true, "name": dest.lastPathComponent])
     }
@@ -375,7 +404,7 @@ final class Engine: ObservableObject {
     private func finishIfDone(_ batch: String) {
         guard let t = transfers.firstIndex(where: { $0.id == batch }) else { return }
         if transfers[t].items.allSatisfy({ $0.finished || $0.failed }) {
-            transfers[t].state = transfers[t].items.contains { $0.failed } ? .failed("Algunos archivos no llegaron completos") : .done
+            transfers[t].state = transfers[t].items.contains { $0.failed } ? .failed(String(localized: "Algunos archivos no llegaron completos")) : .done
             transfers[t].finishedAt = .now
             acceptedBatches[batch] = nil
             batchCollection[batch] = nil
@@ -401,6 +430,15 @@ final class Engine: ObservableObject {
             let err = await self.pair(withPayload: link)
             let name = await MainActor.run { self.justPaired?.name ?? "" }
             return err == nil ? .json(["ok": true, "device": name]) : .json(["error": err!], status: 400)
+        case "/local/text":
+            guard let data = await body.readAll(max: 1 << 20), let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let text = o["text"] as? String, let dev = o["device"] as? String else { return .error("bad_request", 400) }
+            let peer = await MainActor.run {
+                self.peers.first { $0.id == dev } ?? self.peers.first { $0.name.localizedCaseInsensitiveContains(dev) }
+            }
+            guard let peer else { return .error("unknown_device", 404) }
+            let err = await self.sendText(text, to: peer)
+            return err == nil ? .json(["ok": true, "device": peer.name]) : .json(["error": err!], status: 500)
         case "/local/send":
             guard let data = await body.readAll(), let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let paths = o["paths"] as? [String], let dev = o["device"] as? String else { return .error("bad_request", 400) }
@@ -449,7 +487,7 @@ final class Engine: ObservableObject {
     }
 
     /// Finds an address that answers right now.
-    func resolve(_ peer: Peer) async -> String? {
+    public func resolve(_ peer: Peer) async -> String? {
         var candidates: [String] = []
         for c in [peer.lastAddr, discovered[peer.id]].compactMap({ $0 }) + peer.addrs where !candidates.contains(c) { candidates.append(c) }
         // Try LAN-ish first in parallel, return the first that answers.
@@ -465,7 +503,7 @@ final class Engine: ObservableObject {
         }
     }
 
-    func refreshOnline() async {
+    public func refreshOnline() async {
         for p in peers {
             let ok = await resolve(p) != nil
             if ok { online.insert(p.id) } else { online.remove(p.id) }
@@ -474,9 +512,9 @@ final class Engine: ObservableObject {
 
     /// Sends files to one device. Returns an error message for the person, or nil.
     @discardableResult
-    func send(_ input: [URL], to peer: Peer, collection: String? = nil) async -> String? {
+    public func send(_ input: [URL], to peer: Peer, collection: String? = nil) async -> String? {
         let urls = Self.expand(input)
-        guard !urls.isEmpty else { return "No hay archivos para mandar." }
+        guard !urls.isEmpty else { return String(localized: "No hay archivos para mandar.") }
         let batch = UUID().uuidString.lowercased()
         let files = urls.map { u -> TransferItem in
             let size = (try? FileManager.default.attributesOfItem(atPath: u.path)[.size] as? NSNumber)??.int64Value ?? 0
@@ -488,9 +526,9 @@ final class Engine: ObservableObject {
             if let t = transfers.firstIndex(where: { $0.id == batch }) { transfers[t].state = .failed(msg); transfers[t].finishedAt = .now }
             return msg
         }
-        guard let host = await resolve(peer) else { online.remove(peer.id); return fail("\(peer.name) no responde. ¿Tiene Pasala abierta?") }
+        guard let host = await resolve(peer) else { online.remove(peer.id); return fail(String(localized: "\(peer.name) no responde. ¿Tiene Pasala abierta?")) }
         online.insert(peer.id)
-        guard let p = peers.first(where: { $0.id == peer.id }) else { return fail("Ese dispositivo ya no está vinculado.") }
+        guard let p = peers.first(where: { $0.id == peer.id }) else { return fail(String(localized: "Ese dispositivo ya no está vinculado.")) }
 
         var offer = authed(p, host: host, path: "/v1/offer")
         offer.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -499,8 +537,8 @@ final class Engine: ObservableObject {
         if let collection { offerBody["collection"] = collection }
         offer.httpBody = try? JSONSerialization.data(withJSONObject: offerBody)
         guard let (od, _) = try? await session.data(for: offer),
-              let oo = try? JSONSerialization.jsonObject(with: od) as? [String: Any] else { return fail("Se cortó la conexión con \(p.name).") }
-        guard oo["accepted"] as? Bool == true else { return fail("\(p.name) no aceptó los archivos.") }
+              let oo = try? JSONSerialization.jsonObject(with: od) as? [String: Any] else { return fail(String(localized: "Se cortó la conexión con \(p.name).")) }
+        guard oo["accepted"] as? Bool == true else { return fail(String(localized: "\(p.name) no aceptó los archivos.")) }
 
         for (i, item) in files.enumerated() {
             guard let src = item.url else { continue }
@@ -530,7 +568,7 @@ final class Engine: ObservableObject {
             } catch {
                 if let t = transfers.firstIndex(where: { $0.id == batch }) { transfers[t].items[i].failed = true }
                 reloadRecent()
-                return fail("No pude terminar de mandar \(item.name).")
+                return fail(String(localized: "No pude terminar de mandar \(item.name)."))
             }
         }
         if let t = transfers.firstIndex(where: { $0.id == batch }) { transfers[t].state = .done; transfers[t].finishedAt = .now }
@@ -539,7 +577,7 @@ final class Engine: ObservableObject {
     }
 
     /// Folders become the files inside them (hidden files skipped).
-    static func expand(_ urls: [URL]) -> [URL] {
+    public static func expand(_ urls: [URL]) -> [URL] {
         var out: [URL] = []
         for u in urls {
             var isDir: ObjCBool = false
@@ -551,6 +589,79 @@ final class Engine: ObservableObject {
             }
         }
         return out
+    }
+
+    // MARK: text
+
+    public static let snippetMime = "text/x-pasala-snippet"
+
+    static var textsDir: URL {
+        let d = PasalaPaths.supportDir.appendingPathComponent("Texts", isDirectory: true)
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        return d
+    }
+
+    /// One-line preview used as the record's name.
+    static func preview(_ text: String) -> String {
+        let line = text.split(whereSeparator: \.isNewline).first.map(String.init) ?? text
+        let t = line.trimmingCharacters(in: .whitespaces)
+        return t.count > 80 ? String(t.prefix(80)) + "…" : (t.isEmpty ? "…" : t)
+    }
+
+    /// The full text of a received or sent snippet.
+    public func snippetText(_ f: FileRecord) -> String? {
+        guard f.mime == Self.snippetMime else { return nil }
+        return try? String(contentsOf: f.url, encoding: .utf8)
+    }
+
+    @discardableResult
+    private func recordText(_ text: String, id: String, direction: String, peer: Peer) -> FileRecord? {
+        let url = Self.textsDir.appendingPathComponent("\(id).txt")
+        guard (try? text.write(to: url, atomically: true, encoding: .utf8)) != nil else { return nil }
+        db.addFile(batch: id, direction: direction, peerId: peer.id, peerName: peer.name, name: Self.preview(text),
+                   path: url.path, mime: Self.snippetMime, size: Int64(text.utf8.count))
+        reloadRecent()
+        return recent.first { $0.batch == id && $0.direction == direction }
+    }
+
+    private nonisolated func handleText(_ peer: Peer, _ body: HTTPServer.Body) async -> HTTPServer.Response {
+        guard let data = await body.readAll(max: 1 << 20) else { return .error("too_large", 413) }
+        guard let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let id = o["id"] as? String, let text = o["text"] as? String, !text.isEmpty else { return .error("bad_request", 400) }
+        return await MainActor.run {
+            if self.recent.contains(where: { $0.batch == id && $0.direction == "in" }) { return .json(["ok": true]) }
+            self.lastText = self.recordText(text, id: id, direction: "in", peer: peer)
+            return .json(["ok": true])
+        }
+    }
+
+    /// Sends a text to be copied on the other device. Returns an error message for the person, or nil.
+    @discardableResult
+    public func sendText(_ text: String, to peer: Peer) async -> String? {
+        let id = UUID().uuidString.lowercased()
+        var item = TransferItem(name: Self.preview(text), size: Int64(text.utf8.count), mime: Self.snippetMime)
+        transfers.insert(Transfer(id: id, direction: .outgoing, peerId: peer.id, peerName: peer.name, items: [item]), at: 0)
+        func finish(_ err: String?) -> String? {
+            if let t = transfers.firstIndex(where: { $0.id == id }) {
+                if err == nil { item.done = item.size; item.finished = true } else { item.failed = true }
+                transfers[t].items = [item]
+                transfers[t].state = err.map { .failed($0) } ?? .done
+                transfers[t].finishedAt = .now
+            }
+            return err
+        }
+        guard let host = await resolve(peer), let p = peers.first(where: { $0.id == peer.id }) else {
+            online.remove(peer.id); return finish(String(localized: "\(peer.name) no responde. ¿Tiene Pasala abierta?"))
+        }
+        var r = authed(p, host: host, path: "/v1/text")
+        r.timeoutInterval = 20
+        r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        r.httpBody = try? JSONSerialization.data(withJSONObject: ["id": id, "text": text])
+        guard let (_, resp) = try? await session.data(for: r), (resp as? HTTPURLResponse)?.statusCode == 200 else {
+            return finish(String(localized: "Se cortó la conexión con \(p.name)."))
+        }
+        recordText(text, id: id, direction: "out", peer: p)
+        return finish(nil)
     }
 
     // MARK: discovery
@@ -586,12 +697,12 @@ final class Engine: ObservableObject {
     }
 }
 
-struct RemoteCollection: Hashable, Identifiable { let id: String; let name: String }
+public struct RemoteCollection: Hashable, Identifiable { public let id: String; public let name: String }
 
-final class UploadProgress: NSObject, URLSessionTaskDelegate {
-    let onSent: (Int64) -> Void
-    init(_ f: @escaping (Int64) -> Void) { onSent = f }
-    func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+public final class UploadProgress: NSObject, URLSessionTaskDelegate {
+    public let onSent: (Int64) -> Void
+    public init(_ f: @escaping (Int64) -> Void) { onSent = f }
+    public func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
         onSent(totalBytesSent)
     }
 }

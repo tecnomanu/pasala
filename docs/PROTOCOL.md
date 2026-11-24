@@ -12,7 +12,7 @@ Cada nodo tiene, persistido la primera vez que arranca:
 |------------|-----------------------------------------|
 | `id`       | UUID v4 en minúsculas                   |
 | `name`     | "MacBook", "Pixel 9"                    |
-| `platform` | `mac` \| `android` \| `linux` \| `windows` |
+| `platform` | `mac` \| `ios` \| `android` \| `linux` \| `windows` |
 | `port`     | `47820` (si está ocupado, el siguiente libre) |
 
 `addrs` = lista de IPv4 donde el nodo escucha ahora mismo, en este orden:
@@ -121,6 +121,20 @@ Si el nombre ya existe: `foto.jpg` → `foto (1).jpg` → `foto (2).jpg`.
 Respuesta `200 {"ok":true,"name":"<nombre final>"}`. Si el batch no fue aceptado: `409 {"error":"not_accepted"}`.
 Si el cuerpo llegó incompleto: se borra el temporal, no se registra nada.
 `Content-Length` es obligatorio (no `Transfer-Encoding: chunked`); sin él: `411 {"error":"length_required"}`.
+
+### `POST /v1/text`
+Un texto para copiar en el otro dispositivo (el "portapapeles" entre dispositivos). Body JSON:
+
+```json
+{"id":"<uuid>","text":"lo que se copió"}
+```
+
+- `text` en UTF-8, hasta 1 MB; si es más largo: `413 {"error":"too_large"}`.
+- El receptor **no** lo pone solo en el portapapeles del sistema: lo guarda como un texto recibido
+  ("Texto listo para copiar") y la persona lo copia cuando quiere. Se registra en el historial/índice
+  con mime `text/x-pasala-snippet`.
+- No pasa por "pedir confirmación" (es chico y viene de un dispositivo vinculado).
+- Respuesta `200 {"ok":true}`. Un `id` repetido se ignora (`200`), para que reintentar sea seguro.
 
 ### `POST /v1/unpair`
 Sin body. El receptor borra a ese peer. Respuesta `200 {"ok":true}`.

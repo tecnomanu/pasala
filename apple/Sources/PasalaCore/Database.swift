@@ -2,17 +2,30 @@ import Foundation
 import SQLite3
 
 public enum PasalaPaths {
+    /// iOS: the App Group shared by the app and its Share extension (identity, peers and index live there).
+    public static let appGroup = "group.com.tecnomanu.pasala"
+
     public static var supportDir: URL {
+        #if os(iOS)
+        let base = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        #else
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        #endif
         let dir = base.appendingPathComponent("Pasala", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }
     public static var databaseURL: URL { supportDir.appendingPathComponent("pasala.db") }
     public static var localTokenURL: URL { supportDir.appendingPathComponent("local-token") }
+    /// Mac: ~/Downloads/Pasala. iOS: the app's Documents folder (shown as "Pasala" in the Files app).
     public static var defaultInbox: URL {
-        FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
+        #if os(iOS)
+        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        #else
+        return FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Pasala", isDirectory: true)
+        #endif
     }
 }
 

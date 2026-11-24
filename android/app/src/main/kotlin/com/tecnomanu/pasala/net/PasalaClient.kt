@@ -10,6 +10,7 @@ import com.tecnomanu.pasala.data.PairResponse
 import com.tecnomanu.pasala.data.PasalaJson
 import com.tecnomanu.pasala.data.Peer
 import com.tecnomanu.pasala.data.Store
+import com.tecnomanu.pasala.data.TextRequest
 import kotlinx.serialization.KSerializer
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -85,6 +86,12 @@ object PasalaClient {
         val req = Request.Builder().url(url(host, port, "/v1/offer")).auth(peer)
             .post(PasalaJson.encodeToString(OfferRequest.serializer(), offer).toRequestBody(JSON)).build()
         return exec(offerClient, req, OfferResponse.serializer())
+    }
+
+    fun text(host: String, port: Int, peer: Peer, body: TextRequest) {
+        val req = Request.Builder().url(url(host, port, "/v1/text")).auth(peer)
+            .post(PasalaJson.encodeToString(TextRequest.serializer(), body).toRequestBody(JSON)).build()
+        exec(offerClient, req, com.tecnomanu.pasala.data.OkResponse.serializer())
     }
 
     fun unpair(host: String, port: Int, peer: Peer) {

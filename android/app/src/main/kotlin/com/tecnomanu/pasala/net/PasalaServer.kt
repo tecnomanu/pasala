@@ -15,6 +15,8 @@ import com.tecnomanu.pasala.data.PairResponse
 import com.tecnomanu.pasala.data.PasalaJson
 import com.tecnomanu.pasala.data.Peer
 import com.tecnomanu.pasala.data.Store
+import com.tecnomanu.pasala.data.TEXT_MAX_BYTES
+import com.tecnomanu.pasala.data.TextRequest
 import com.tecnomanu.pasala.net.MiniHttpServer.HttpRequest
 import com.tecnomanu.pasala.net.MiniHttpServer.HttpResponse
 import kotlinx.serialization.SerializationException
@@ -39,6 +41,7 @@ class PasalaServer {
                 "/v1/offer" -> authed(req) { offer(it, req) }
                 "/v1/files" -> authed(req) { files(it, req) }
                 "/v1/unpair" -> authed(req) { unpair(it) }
+                "/v1/text" -> authed(req) { text(it, req) }
                 else -> HttpResponse.error(404, "not_found")
             }
         } catch (e: SerializationException) {
@@ -121,11 +124,33 @@ class PasalaServer {
         }
     }
 
+    private fun text(peer: Peer, req: HttpRequest): HttpResponse {
+        // JSON escaping can grow the body; the 1 MB limit applies to the text itself.
+        if (req.body.declaredLength > TEXT_MAX_BYTES * 2L) return HttpResponse.error(413, "too_large")
+        val raw = try {
+            req.body.readAllText(TEXT_MAX_BYTES * 2)
+        } catch (e: EOFException) {
+            return HttpResponse.error(400, "incomplete")
+        } catch (e: IOException) {
+            return HttpResponse.error(413, "too_large")
+        }
+        val body = PasalaJson.decodeFromString(TextRequest.serializer(), raw)
+        // The id names a file on disk: only accept plain ids (UUIDs and the like).
+        if (!TEXT_ID.matches(body.id)) return HttpResponse.error(400, "bad_request")
+        if (body.text.toByteArray(Charsets.UTF_8).size > TEXT_MAX_BYTES) return HttpResponse.error(413, "too_large")
+        Store.updatePeer(peer.id) { it.copy(lastSeen = System.currentTimeMillis()) }
+        Receiver.receiveText(peer, body.id, body.text)
+        return HttpResponse.ok(PasalaJson.encodeToString(OkResponse.serializer(), OkResponse(true)))
+    }
+
     private fun unpair(peer: Peer): HttpResponse {
         Store.removePeer(peer.id)
         Log.i(TAG, "${peer.displayName} unpaired us")
         return HttpResponse.ok(PasalaJson.encodeToString(OkResponse.serializer(), OkResponse(true)))
     }
 
-    companion object { private const val TAG = "Pasala" }
+    companion object {
+        private const val TAG = "Pasala"
+        private val TEXT_ID = Regex("[A-Za-z0-9_-]{1,64}")
+    }
 }

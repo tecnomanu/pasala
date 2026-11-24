@@ -84,6 +84,8 @@ import com.tecnomanu.pasala.ui.theme.Orange
 import com.tecnomanu.pasala.ui.theme.P
 import com.tecnomanu.pasala.ui.theme.Violet
 import java.util.UUID
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -173,15 +175,15 @@ fun SendScreen(
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, "Cerrar", tint = c.text) }
+                            IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, stringResource(R.string.action_close), tint = c.text) }
                         }
                         Text(
-                            if (files.size == 1) "Pasar 1 archivo" else "Pasar ${files.size} archivos",
+                            pluralStringResource(R.plurals.send_title, files.size, files.size),
                             style = MaterialTheme.typography.displaySmall, color = c.text,
                             modifier = Modifier.padding(start = 4.dp, top = 6.dp),
                         )
                         Text(
-                            "${Format.size(total)} en total",
+                            stringResource(R.string.send_total, Format.size(total)),
                             style = MaterialTheme.typography.bodyMedium, color = c.muted,
                             modifier = Modifier.padding(start = 4.dp, top = 2.dp, bottom = 14.dp),
                         )
@@ -228,32 +230,35 @@ fun SendScreen(
                     when (phase) {
                         null -> GradientButton(
                             text = selPeer?.let { p ->
-                                "Enviar a ${p.displayName}" + (collections.firstOrNull { it.id == collection }?.let { " · ${it.name}" } ?: "")
-                            } ?: "Elegí a dónde",
+                                collections.firstOrNull { it.id == collection }
+                                    ?.let { stringResource(R.string.send_to_col, p.displayName, it.name) }
+                                    ?: stringResource(R.string.send_to, p.displayName)
+                            } ?: stringResource(R.string.send_pick),
                             enabled = selected != null && files.isNotEmpty(),
                             modifier = Modifier.fillMaxWidth(),
                             icon = { androidx.compose.foundation.Image(painterResource(R.drawable.ic_mark), null, modifier = Modifier.size(24.dp)) },
                         ) { start() }
                         Sender.Phase.Done -> ResultPanel(
                             ok = true,
-                            title = "Listo, ya está en ${shownJob!!.peerName}",
-                            body = (if (files.size == 1) "Llegó el archivo" else "Llegaron los ${files.size} archivos") +
-                                (shownJob!!.collectionName?.let { " a $it." } ?: "."),
-                            primary = "Cerrar", onPrimary = { Sender.forget(jobId); onClose() },
+                            title = stringResource(R.string.sent_title, shownJob!!.peerName),
+                            body = shownJob.collectionName
+                                ?.let { pluralStringResource(R.plurals.sent_body_col, files.size, files.size, it) }
+                                ?: pluralStringResource(R.plurals.sent_body, files.size, files.size),
+                            primary = stringResource(R.string.action_close), onPrimary = { Sender.forget(jobId); onClose() },
                         )
                         Sender.Phase.Declined, Sender.Phase.Unreachable, Sender.Phase.Failed -> ResultPanel(
                             ok = false,
                             title = when (phase) {
-                                Sender.Phase.Declined -> "${shownJob!!.peerName} no lo aceptó"
-                                Sender.Phase.Unreachable -> "No encontramos a ${shownJob!!.peerName}"
-                                else -> "Se cortó en el camino"
+                                Sender.Phase.Declined -> stringResource(R.string.declined_title, shownJob!!.peerName)
+                                Sender.Phase.Unreachable -> stringResource(R.string.unreach_title, shownJob!!.peerName)
+                                else -> stringResource(R.string.failed_title)
                             },
                             body = when (phase) {
-                                Sender.Phase.Declined -> "Del otro lado dijeron que no, o no contestaron a tiempo."
-                                Sender.Phase.Unreachable -> "Fijate que esté prendido y con Pasala abierta, en la misma red o con Tailscale."
-                                else -> "Algunos archivos no llegaron. Podés probar de nuevo."
+                                Sender.Phase.Declined -> stringResource(R.string.declined_body)
+                                Sender.Phase.Unreachable -> stringResource(R.string.unreach_body)
+                                else -> stringResource(R.string.failed_body)
                             },
-                            primary = "Reintentar",
+                            primary = stringResource(R.string.action_retry),
                             onPrimary = {
                                 Sender.forget(jobId)
                                 jobId = UUID.randomUUID().toString()
@@ -261,7 +266,7 @@ fun SendScreen(
                                 val col = shownJob!!.collectionName?.let { n -> Store.peer(shownJob.peerId)?.collections?.firstOrNull { it.name == n }?.id }
                                 PasalaService.send(context, jobId, selected ?: shownJob.peerId, files, col)
                             },
-                            secondary = "Cerrar", onSecondary = { Sender.forget(jobId); onClose() },
+                            secondary = stringResource(R.string.action_close), onSecondary = { Sender.forget(jobId); onClose() },
                         )
                         else -> ProgressPanel(shownJob!!)
                     }
@@ -312,7 +317,7 @@ private fun DoneBadge() {
 }
 
 @Composable
-private fun DestinationPicker(
+internal fun DestinationPicker(
     peers: List<Peer>,
     online: Map<String, Boolean>,
     checking: Boolean,
@@ -322,14 +327,14 @@ private fun DestinationPicker(
 ) {
     val c = P.c
     Column(Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SectionLabel("¿A dónde?") {
+        SectionLabel(stringResource(R.string.where_label)) {
             if (checking) CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = c.muted)
         }
         if (peers.isEmpty()) {
             PasalaCard(Modifier.fillMaxWidth(), onClick = onAddDevice) {
-                Text("Todavía no sumaste dispositivos", style = MaterialTheme.typography.titleMedium, color = c.text)
+                Text(stringResource(R.string.no_devices_title), style = MaterialTheme.typography.titleMedium, color = c.text)
                 Text(
-                    "Abrí Pasala y escaneá el código de tu Mac o de otro teléfono. Después vas a poder elegirlo acá.",
+                    stringResource(R.string.no_devices_body),
                     style = MaterialTheme.typography.bodyMedium, color = c.muted, modifier = Modifier.padding(top = 4.dp),
                 )
             }
@@ -355,7 +360,7 @@ private fun DestinationPicker(
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
                     Text(p.displayName, style = MaterialTheme.typography.titleMedium, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        if (isOn) "En línea" else if (checking) "Buscando…" else "No aparece ahora",
+                        stringResource(if (isOn) R.string.online else if (checking) R.string.searching else R.string.not_found_now),
                         style = MaterialTheme.typography.bodySmall, color = if (isOn) c.success else c.muted,
                     )
                 }
@@ -382,19 +387,18 @@ private fun CollectionPicker(
 ) {
     val c = P.c
     Column(Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SectionLabel("¿En qué colección?") {
+        SectionLabel(stringResource(R.string.collection_label)) {
             if (checking) CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = c.muted)
         }
         PasalaCard(Modifier.fillMaxWidth(), padding = 14.dp) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                CollectionChip("Ninguna", Icons.Rounded.Inbox, selected == null) { onSelect(null) }
+                CollectionChip(stringResource(R.string.collection_none), Icons.Rounded.Inbox, selected == null) { onSelect(null) }
                 collections.forEach { col ->
                     CollectionChip(col.name, Icons.Rounded.Folder, selected == col.id) { onSelect(col.id) }
                 }
             }
             Text(
-                if (selected == null) "Queda donde $peerName guarda siempre."
-                else "Queda en la colección que armaste en $peerName.",
+                stringResource(if (selected == null) R.string.collection_none_hint else R.string.collection_hint, peerName),
                 style = MaterialTheme.typography.bodySmall, color = c.muted,
                 modifier = Modifier.padding(top = 12.dp, start = 4.dp),
             )
@@ -440,7 +444,7 @@ private fun ProgressPanel(job: Sender.JobState) {
             Box(Modifier.size(54.dp), contentAlignment = Alignment.Center) {
                 if (job.phase == Sender.Phase.Sending) {
                     ProgressRing(job.progress, Modifier.size(54.dp), track = c.outline)
-                    Text("$pct%", style = MaterialTheme.typography.labelSmall, color = c.text)
+                    Text(stringResource(R.string.percent, pct), style = MaterialTheme.typography.labelSmall, color = c.text)
                 } else {
                     CircularProgressIndicator(Modifier.size(40.dp), color = Orange, strokeWidth = 3.dp, trackColor = c.outline)
                 }
@@ -448,16 +452,18 @@ private fun ProgressPanel(job: Sender.JobState) {
             Column(Modifier.padding(start = 16.dp).weight(1f)) {
                 Text(
                     when (job.phase) {
-                        Sender.Phase.Connecting -> "Buscando a ${job.peerName}…"
-                        Sender.Phase.Waiting -> "Esperando que ${job.peerName} acepte…"
-                        else -> "Pasando a ${job.peerName}" + (job.collectionName?.let { " · $it" } ?: "") + "…"
+                        Sender.Phase.Connecting -> stringResource(R.string.phase_connecting, job.peerName)
+                        Sender.Phase.Waiting -> stringResource(R.string.phase_waiting, job.peerName)
+                        else -> job.collectionName?.let { stringResource(R.string.phase_sending_col, job.peerName, it) }
+                            ?: stringResource(R.string.phase_sending, job.peerName)
                     },
                     style = MaterialTheme.typography.titleMedium, color = c.text, maxLines = 2,
                 )
                 val doneCount = job.files.count { it.done }
                 Text(
-                    if (job.phase == Sender.Phase.Sending) "$doneCount de ${job.files.size} · ${Format.size(job.sent)} de ${Format.size(job.total)}"
-                    else "Podés salir de esta pantalla, sigue solo.",
+                    if (job.phase == Sender.Phase.Sending) {
+                        stringResource(R.string.progress_detail, doneCount, job.files.size, Format.size(job.sent), Format.size(job.total))
+                    } else stringResource(R.string.progress_leave),
                     style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 2.dp),
                 )
             }
@@ -466,7 +472,7 @@ private fun ProgressPanel(job: Sender.JobState) {
 }
 
 @Composable
-private fun ResultPanel(
+internal fun ResultPanel(
     ok: Boolean,
     title: String,
     body: String,

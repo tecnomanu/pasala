@@ -12,6 +12,8 @@ import com.tecnomanu.pasala.data.HistoryItem
 import com.tecnomanu.pasala.data.OfferRequest
 import com.tecnomanu.pasala.data.Peer
 import com.tecnomanu.pasala.data.Store
+import com.tecnomanu.pasala.data.TEXT_MIME
+import com.tecnomanu.pasala.data.TextStore
 import com.tecnomanu.pasala.service.Notifications
 import java.io.IOException
 import java.io.InputStream
@@ -160,6 +162,24 @@ object Receiver {
         } finally {
             Radio.release()
         }
+    }
+
+    /** `/v1/text`: kept as "text ready to copy"; never written to the clipboard by itself. */
+    fun receiveText(peer: Peer, id: String, text: String) {
+        val itemId = "text-$id"
+        synchronized(this) {
+            if (Store.state.value.history.any { it.id == itemId }) return // retry of one we already have
+            TextStore.save(app, itemId, text)
+            Store.addHistory(
+                HistoryItem(
+                    id = itemId, direction = "in", peerId = peer.id, peerName = peer.displayName,
+                    name = "", size = text.toByteArray(Charsets.UTF_8).size.toLong(), mime = TEXT_MIME,
+                    time = System.currentTimeMillis(), text = TextStore.preview(text),
+                )
+            )
+        }
+        Notifications.textReady(app, itemId, peer.displayName, TextStore.preview(text))
+        Log.i(TAG, "text (${text.length} chars) from ${peer.displayName}")
     }
 
     enum class Kind { Image, Video, Other }
