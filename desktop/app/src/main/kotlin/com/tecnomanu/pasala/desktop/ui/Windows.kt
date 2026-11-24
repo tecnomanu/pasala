@@ -129,10 +129,21 @@ fun MainWindow() {
                 SectionLabel(stringResource(Res.string.devices))
                 if (state.peers.isEmpty()) T(stringResource(Res.string.main_no_devices), 13.sp, color = P.dim)
                 state.peers.forEach { p ->
+                    var confirm by remember(p.id) { mutableStateOf(false) }
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { Ui.showSend(emptyList(), p.id) }.padding(6.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         DeviceGlyph(p.platform, online[p.id] == true, 34.dp)
                         Spacer(Modifier.width(10.dp))
+                        if (confirm) {
+                            Column(Modifier.weight(1f)) {
+                                T(stringResource(Res.string.unpair_title, p.displayName), 12.5.sp, FontWeight.SemiBold)
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    T(stringResource(Res.string.cancel), 11.5.sp, FontWeight.Bold, P.dim, Modifier.clickable { confirm = false })
+                                    T(stringResource(Res.string.unpair), 11.5.sp, FontWeight.Bold, P.orange, Modifier.clickable { Pairing.unpair(p) })
+                                }
+                            }
+                            return@Row
+                        }
                         Column(Modifier.weight(1f)) {
                             T(p.displayName, 13.5.sp, FontWeight.SemiBold, maxLines = 1)
                             T(when {
@@ -141,6 +152,7 @@ fun MainWindow() {
                                 else -> stringResource(Res.string.not_connected)
                             }, 11.5.sp, color = if (online[p.id] == true) P.mint else P.dim)
                         }
+                        T(stringResource(Res.string.unpair), 11.sp, FontWeight.Bold, P.dim, Modifier.clickable { confirm = true }.padding(4.dp))
                     }
                 }
                 GlowButton(stringResource(Res.string.add_device)) { Ui.showPair() }

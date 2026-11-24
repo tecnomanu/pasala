@@ -56,7 +56,7 @@ class ShareActivity : ComponentActivity() {
     private fun describePicked() {
         val uris = picked
         lifecycleScope.launch {
-            files = withContext(Dispatchers.IO) { uris.mapNotNull { Sender.describe(this@ShareActivity, it) } }
+            files = withContext(Dispatchers.IO) { uris.mapNotNull { AndroidPlatform.describe(this@ShareActivity, it) } }
         }
     }
 

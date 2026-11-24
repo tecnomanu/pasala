@@ -26,6 +26,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.tecnomanu.pasala.R
+import com.tecnomanu.pasala.core.Pairing
 import com.tecnomanu.pasala.core.Format
 import com.tecnomanu.pasala.core.Live
 import com.tecnomanu.pasala.core.Receiver
@@ -132,12 +133,4 @@ fun UnpairDialog(peer: Peer, onDismiss: () -> Unit) {
 }
 
 /** Tells the other side (best effort) and forgets the peer here right away. */
-fun unpair(peer: Peer) {
-    Store.removePeer(peer.id)
-    Live.appScope.launch(Dispatchers.IO) {
-        val route = Resolver.candidates(peer).firstOrNull { r ->
-            runCatching { PasalaClient.unpair(r.host, r.port, peer); true }.getOrDefault(false)
-        }
-        android.util.Log.i("Pasala", "unpaired ${peer.displayName}, told other side: ${route != null}")
-    }
-}
+fun unpair(peer: Peer) = Pairing.unpair(peer)

@@ -83,6 +83,9 @@
     <string name="just_now">just now</string>
     <string name="seen_ago">Seen %1$s ago</string>
     <string name="not_connected">Not connected</string>
+    <string name="unpair">Unlink</string>
+    <string name="unpair_title">Unlink %1$s? You won’t be able to send each other files until you pair again.</string>
+    <string name="cancel">Cancel</string>
     <string name="add_device">Add device</string>
     <string name="collections">Collections</string>
     <string name="collections_hint">Named folders your devices can pick when they send you something.</string>

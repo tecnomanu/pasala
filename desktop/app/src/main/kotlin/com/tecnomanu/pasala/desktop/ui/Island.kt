@@ -145,6 +145,9 @@ fun Island() {
         toast != null && toast!!.until > now -> Mode.Done
         else -> Mode.Idle
     }
+    LaunchedEffect(mode, Ui.mainOpen, Ui.sendFiles) {
+        Desktop.onScreen.value = mode == Mode.Open || mode == Mode.Drop || mode == Mode.PickText || Ui.mainOpen || Ui.sendFiles != null
+    }
     val mustShow = mode == Mode.PickText || mode == Mode.Offer || mode == Mode.Drop
     val visible = !Ui.islandHidden || mustShow
 

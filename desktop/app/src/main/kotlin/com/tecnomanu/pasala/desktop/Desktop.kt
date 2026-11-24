@@ -49,6 +49,8 @@ object Desktop {
     /** Text waiting for the person to pick a device. */
     val pendingText = MutableStateFlow<String?>(null)
     val inbox = MutableStateFlow(Paths.defaultInbox)
+    /** Something that shows whether devices are online is visible (island open, a window). */
+    val onScreen = MutableStateFlow(false)
 
     sealed interface Notice {
         data class Received(val from: String, val count: Int, val lastName: String, val file: File) : Notice
@@ -93,10 +95,19 @@ object Desktop {
             Live.appScope.launch { Pairing.current.collect { c -> c?.let { java.io.File(Paths.dataDir, "debug-pair.txt").writeText(it.payload) } } }
             Pairing.newCode()
         }
+        // Protocol § "Cada cuánto": every 20 s while Pasala is on screen, every 10 min otherwise.
         Live.appScope.launch {
+            var last = 0L
+            var wasWatching = false
             while (true) {
-                runCatching { Resolver.refreshAll() }
-                delay(45_000)
+                val now = System.currentTimeMillis()
+                val watching = onScreen.value
+                if (now - last >= (if (watching) 20_000L else 600_000L) || (watching && !wasWatching)) {
+                    runCatching { Resolver.refreshAll() }
+                    last = System.currentTimeMillis()
+                }
+                wasWatching = watching
+                delay(2_000)
             }
         }
     }

@@ -153,7 +153,7 @@ a cada dirección (LAN y Tailscale). Cada uno además reescribía el JSON de est
 `hello` en bucle sin pantalla visible (`PROTOCOL.md`, "Cada cuánto"); el lado que pregunta es el que tiene que cambiar.
 Mac: cada 20 s solo con la isla abierta o una ventana visible; si no, cada 10 min; y prueba primero la última
 dirección sola en vez de todas a la vez (de ~2600 paquetes/h a unas decenas).
-**Where:** `kotlin/shared/…/data/Store.kt` (`seen`), `kotlin/shared/…/net/PasalaServer.kt`, `android/…/service/PasalaService.kt` …; `service/PasalaService.kt` (`scheduleReannounce`);
+**Where:** `kotlin/shared/…/data/Store.kt` (`seen`), `kotlin/shared/…/net/PasalaServer.kt`, `android/…/service/PasalaService.kt` (`scheduleReannounce`);
 `apple/Sources/PasalaKit/Engine.swift` (`tick`, `resolve`).
 
 <a id="survive-swipe"></a>

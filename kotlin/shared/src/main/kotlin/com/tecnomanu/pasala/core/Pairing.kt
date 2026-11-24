@@ -13,7 +13,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.tecnomanu.pasala.net.Resolver
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
@@ -114,6 +116,17 @@ object Pairing {
             }
         }
         if (expired) Result.Expired else Result.Unreachable
+    }
+
+    /** Forgets [peer] here right away and tells the other side (best effort, protocol § unpair). */
+    fun unpair(peer: Peer) {
+        Store.removePeer(peer.id)
+        Live.appScope.launch(Dispatchers.IO) {
+            val route = Resolver.candidates(peer).firstOrNull { r ->
+                runCatching { PasalaClient.unpair(r.host, r.port, peer); true }.getOrDefault(false)
+            }
+            Log.i(TAG, "unpaired ${peer.displayName}, told other side: ${route != null}")
+        }
     }
 
     /** The other device scanned our code and called /v1/pair. */

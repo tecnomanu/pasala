@@ -79,6 +79,9 @@
     <string name="just_now">recién</string>
     <string name="seen_ago">Visto hace %1$s</string>
     <string name="not_connected">Sin conexión</string>
+    <string name="unpair">Desvincular</string>
+    <string name="unpair_title">¿Desvincular %1$s? No van a poder pasarse archivos hasta que se vuelvan a vincular.</string>
+    <string name="cancel">Cancelar</string>
     <string name="add_device">Sumar dispositivo</string>
     <string name="collections">Colecciones</string>
     <string name="collections_hint">Carpetas con nombre que tus dispositivos pueden elegir al mandarte algo.</string>
