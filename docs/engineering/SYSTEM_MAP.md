@@ -54,6 +54,7 @@ Lo mismo usa una segunda ejecución de la app de escritorio (`/local/open`) para
 | Android: MediaStore `Pictures|Movies|Download/Pasala` | Lo recibido |
 | Windows/Linux: carpeta de datos `pasala.json` | Identidad, peers, ajustes, historial (mismo formato que Android) |
 | Windows/Linux: carpeta de datos `pasala.db` | `settings`, `files` (índice), `collections`: mismo esquema que la Mac, sin `peers` |
+| Windows/Linux: carpeta de datos `local-token`, `pasala.log` | Token de la ruta local (nuevo en cada arranque); registro local de hasta 1 MB |
 | Windows/Linux: `~/Downloads/Pasala` o la carpeta elegida | Lo recibido |
 
 ## Archivos que vale la pena conocer

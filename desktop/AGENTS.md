@@ -13,7 +13,8 @@ Rige todo lo de [`../AGENTS.md`](../AGENTS.md). Esto es lo propio de la app de W
   `kotlin/shared`. `Ui` guarda qué ventana está abierta; el estado de verdad está en `Store` y `Desktop`.
 - Estado en la carpeta de datos (`%APPDATA%\Pasala` / `~/.local/share/pasala`, o `PASALA_HOME`):
   `pasala.json` (identidad, peers, ajustes; el mismo formato que Android), `pasala.db` (índice SQLite con el
-  esquema de la Mac, para el MCP), `local-token` (0600), `texts/`.
+  esquema de la Mac, para el MCP), `local-token` (0600, nuevo en cada arranque), `texts/`, `pasala.log` (≤ 1 MB;
+  la app instalada no tiene consola). En Linux la carpeta es 0700: guarda los secretos de los peers.
 - Lo recibido va a `~/Downloads/Pasala` (o la carpeta elegida, o la de la colección): a un `.part` en la misma
   carpeta y se mueve al terminar. Nunca afuera de la carpeta destino.
 - Una segunda ejecución (`Pasala archivo…`, `--send-text`, `--pair`) le pasa el pedido a la que corre por
@@ -25,6 +26,11 @@ Rige todo lo de [`../AGENTS.md`](../AGENTS.md). Esto es lo propio de la app de W
 - Atajo global Ctrl+Alt+P: `RegisterHotKey` (Windows) y `XGrabKey` (X11). En Wayland no hay atajos globales para
   apps: la persona asocia un atajo del sistema a `pasala --send-text`.
 - Sin descubrimiento mDNS todavía: se llega a los peers por las direcciones que trae cada `hello`.
+- `hello` según PROTOCOL § "Cada cuánto": cada 20 s solo con la isla abierta o una ventana de Pasala con foco
+  (`Desktop.onScreen`); si no, cada 10 min y solo a la última dirección que anduvo.
+- Nombres recibidos: además del saneo compartido, sin caracteres de dirección (U+202E…), sin puntos finales y sin
+  nombres reservados de Windows (`CON`, `NUL`, `COM1`…), en `Desktop.kt` (`safeName`).
+- Debug: `PASALA_DEBUG=1` escribe el link de vinculación en `debug-pair.txt`; `PASALA_ISLAND=open` deja la isla abierta.
 
 ## Comandos
 
