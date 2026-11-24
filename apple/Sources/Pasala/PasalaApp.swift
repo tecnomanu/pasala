@@ -8,7 +8,11 @@ import PasalaKit
 struct PasalaApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
     // The menu bar icon is an NSStatusItem (StatusBar) so a double click can open the window.
-    var body: some Scene { Settings { EmptyView() } }
+    // SwiftUI needs one scene; a menu bar extra that is never inserted opens no window by itself
+    // (an empty Settings scene popped up when our own Ajustes window closed). See HISTORY.md#status-item
+    var body: some Scene {
+        MenuBarExtra("Pasala", isInserted: .constant(false)) { EmptyView() }
+    }
 }
 
 /// Menu bar icon: one click shows the menu, a double click opens Pasala, right click shows the menu at once.

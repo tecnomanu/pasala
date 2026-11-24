@@ -116,6 +116,15 @@ final class NotchModel: ObservableObject {
         }
     }
 
+    /// Closed island: as wide as its text needs (plane + text + dot), never narrower than the bare pill.
+    private var idleWidth: CGFloat {
+        guard let info = idleInfo else { return 190 }
+        let base = NSFont.systemFont(ofSize: 11.5, weight: .semibold)
+        let font = base.fontDescriptor.withDesign(.rounded).flatMap { NSFont(descriptor: $0, size: 11.5) } ?? base
+        let text = (info.text as NSString).size(withAttributes: [.font: font]).width
+        return max(190, ceil(text) + (info.arrived ? 28 : 0) + 104)
+    }
+
     func clearRecent() {
         clearedAt = .now
         engine.db.setSetting("island_cleared_at", String(clearedAt.timeIntervalSince1970))
@@ -154,7 +163,7 @@ final class NotchModel: ObservableObject {
 
     var size: CGSize {
         switch mode {
-        case .idle: return CGSize(width: idleInfo == nil ? 210 : (idleInfo!.arrived ? 330 : 300), height: 34)
+        case .idle: return CGSize(width: idleWidth, height: 34)
         case .open: return CGSize(width: 620, height: 218)
         case .transfer: return CGSize(width: 560, height: 176)
         case .done: return CGSize(width: 500, height: 150)
@@ -208,13 +217,15 @@ final class NotchController {
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.position() }
         }
-        let mask: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .leftMouseUp]
+        let mask: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDown, .leftMouseDragged, .leftMouseUp]
         monitors.append(NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] e in
             Task { @MainActor in self?.handle(e) }
         } as Any)
         monitors.append(NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] e in
+            // While moving the island, its own clicks and drags don't reach the buttons underneath.
+            let swallow = MainActor.assumeIsolated { self?.moving ?? false } && e.type != .leftMouseUp
             Task { @MainActor in self?.handle(e) }
-            return e
+            return swallow ? nil : e
         } as Any)
     }
 
@@ -278,9 +289,29 @@ final class NotchController {
         return NSRect(x: f.midX - s.width / 2, y: f.maxY - s.height, width: s.width, height: s.height)
     }
 
+    // Long press on the island (0.45 s without moving), then drag: moves it to another screen.
+    private var pressStart: NSPoint?
+    private(set) var moving = false
+
     private func handle(_ e: NSEvent) {
         let p = NSEvent.mouseLocation
         switch e.type {
+        case .leftMouseDown where islandRect.contains(p):
+            pressStart = p
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
+                guard let self, let start = self.pressStart, NSEvent.pressedMouseButtons & 1 == 1,
+                      hypot(NSEvent.mouseLocation.x - start.x, NSEvent.mouseLocation.y - start.y) < 6 else { return }
+                self.moving = true
+                self.moveChanged()
+            }
+            return
+        case .leftMouseDragged where moving:
+            moveChanged()
+            return
+        case .leftMouseUp where moving:
+            moving = false; pressStart = nil
+            moveEnded()
+            return
         case .leftMouseDragged:
             let pb = NSPasteboard(name: .drag)
             if pb.changeCount != dragChangeCount,
@@ -290,6 +321,7 @@ final class NotchController {
                 if model.dragging { panel.ignoresMouseEvents = false }
             }
         case .leftMouseUp:
+            pressStart = nil
             dragChangeCount = NSPasteboard(name: .drag).changeCount
             if model.dragging {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
@@ -343,9 +375,6 @@ struct NotchRoot: View {
         return ZStack(alignment: .top) {
             NotchShape(ear: expanded ? 14 : 8, bottom: expanded ? 30 : 13)
                 .fill(Color.black)
-                .gesture(LongPressGesture(minimumDuration: 0.45).sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .global))
-                    .onChanged { v in if case .second(true, _) = v { model.controller?.moveChanged() } }
-                    .onEnded { v in if case .second(true, _) = v { model.controller?.moveEnded() } })
                 .shadow(color: expanded ? Theme.violet.opacity(0.35) : .clear, radius: 24, y: 10)
             NotchShape(ear: expanded ? 14 : 8, bottom: expanded ? 30 : 13)
                 .stroke(LinearGradient(colors: [.clear, .white.opacity(expanded ? 0.12 : 0.05)], startPoint: .top, endPoint: .bottom), lineWidth: 1)
@@ -359,6 +388,7 @@ struct NotchRoot: View {
         .contentShape(NotchShape(ear: 14, bottom: 30))
         // Double click anywhere on the island (its edge included) opens the window.
         .simultaneousGesture(TapGesture(count: 2).onEnded { Windows.shared.showMain() })
+
         .contextMenu { IslandMenu(model: model) }
     }
 

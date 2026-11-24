@@ -83,6 +83,10 @@ Un `String` armado a mano (ternarios, parámetros `title: String`) no se traduce
 muestra el menú al instante; el menú se arma de nuevo cada vez.
 **Why:** `MenuBarExtra` abre el menú en el primer clic (no hay doble clic) y sus tildes no se refrescaban al
 cambiar "Mostrar notch".
+La escena SwiftUI que exige la app es un `MenuBarExtra` con `isInserted: false`: una escena `Settings` vacía
+aparecía sola al cerrar la ventana de Ajustes, y usar la escena `Settings` para los ajustes desarmaba el diseño.
+Mover la isla entre pantallas también va por eventos de AppKit (`NotchController.handle`): un gesto de SwiftUI
+no llegaba en el panel de la isla.
 **Where:** `apple/Sources/Pasala/PasalaApp.swift` (`StatusBar`).
 
 ## iPhone
