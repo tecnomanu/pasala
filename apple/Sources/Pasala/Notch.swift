@@ -111,6 +111,7 @@ final class NotchModel: ObservableObject {
         else if let u = showDoneUntil, u > .now { m = .done }
         else { m = .idle }
         let info = makeIdleInfo()
+        if m == .open && mode != .open { engine.refreshSoon() }
         if m != mode || info != idleInfo {
             withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) { mode = m; idleInfo = info }
         }

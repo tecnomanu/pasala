@@ -2,7 +2,11 @@ package com.tecnomanu.pasala.ui.settings
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,7 +25,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -136,22 +139,58 @@ fun SettingsScreen(onBack: () -> Unit) {
                 exempt = com.tecnomanu.pasala.service.Background.isExempt(ctx)
                 onPauseOrDispose { }
             }
-            PasalaCard(
-                Modifier.fillMaxWidth(),
-                onClick = if (exempt) null else ({ com.tecnomanu.pasala.service.Background.open(ctx) }),
-            ) {
+            // A state with a way to change it, not a switch: only the system can turn the exemption off.
+            PasalaCard(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f).padding(end = 12.dp)) {
                         Text(stringResource(R.string.settings_background_title), style = MaterialTheme.typography.titleSmall, color = c.text)
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                            Box(
+                                Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                    .background(if (exempt) c.success else c.faint),
+                            )
+                            Text(
+                                stringResource(if (exempt) R.string.settings_background_state_on else R.string.settings_background_state_off),
+                                style = MaterialTheme.typography.labelMedium, color = if (exempt) c.success else c.muted,
+                                modifier = Modifier.padding(start = 6.dp),
+                            )
+                        }
                         Text(
                             stringResource(if (exempt) R.string.settings_background_on else R.string.settings_background_off),
-                            style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 2.dp),
+                            style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 4.dp),
                         )
                     }
-                    if (exempt) {
-                        Icon(Icons.Rounded.CheckCircle, null, tint = c.success)
-                    } else {
-                        Text(stringResource(R.string.battery_allow), style = MaterialTheme.typography.titleSmall, color = Orange)
+                    Text(
+                        stringResource(R.string.action_change),
+                        style = MaterialTheme.typography.titleSmall, color = Orange,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .clickable { com.tecnomanu.pasala.service.Background.change(ctx) }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
+            }
+
+            val launchSettings = remember { com.tecnomanu.pasala.service.Background.vendorLaunchSettings(ctx) }
+            if (launchSettings != null) {
+                Spacer(Modifier.height(12.dp))
+                PasalaCard(Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                            Text(stringResource(R.string.settings_autostart_title), style = MaterialTheme.typography.titleSmall, color = c.text)
+                            Text(
+                                stringResource(R.string.settings_autostart_body),
+                                style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
+                        Text(
+                            stringResource(R.string.action_change),
+                            style = MaterialTheme.typography.titleSmall, color = Orange,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .clickable { runCatching { ctx.startActivity(launchSettings) } }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                        )
                     }
                 }
             }

@@ -36,8 +36,8 @@
     <string name="detail_id">Identifier</string>
     <string name="detail_devices">Linked devices</string>
     <string name="settings_background_title">Works with the screen off</string>
-    <string name="settings_background_on">Pasala can keep running in the background, so your devices find it even when the phone is idle.</string>
-    <string name="settings_background_off">Your phone may put Pasala to sleep to save battery. Allow it so files keep arriving with the screen off.</string>
+    <string name="settings_background_on">Your devices find this phone even with the screen off. To turn it off, tap Change.</string>
+    <string name="settings_background_off">Your phone may put Pasala to sleep to save battery. Tap Change so files keep arriving with the screen off.</string>
     <string name="share_empty_title">Nothing to send</string>
     <string name="share_empty_body">Pasala sends photos, videos, files and text, but this didn’t include anything to send.</string>
     <string name="ch_ready_name">Ready to receive</string>
@@ -180,4 +180,18 @@
     <string name="text_sent_body">It’s waiting there, ready to copy.</string>
     <string name="text_tap_hint">Tap to copy</string>
     <string name="text_too_long_action">This text is too long to copy or share from here.</string>
+    <string name="action_change">Change</string>
+    <string name="settings_background_state_on">On</string>
+    <string name="settings_background_state_off">Off</string>
+    <string name="notif_action_send_clip">Send copied text</string>
+    <string name="shortcut_clip_short">Send copied</string>
+    <string name="shortcut_clip_long">Send what you copied</string>
+    <string name="shortcut_files_short">Send files</string>
+    <string name="shortcut_files_long">Send files</string>
+    <string name="widget_label">Quick send</string>
+    <string name="widget_desc">Send copied text or a file in one tap</string>
+    <string name="widget_clip">Send copied text</string>
+    <string name="widget_file">Send file</string>
+    <string name="settings_autostart_title">Start on its own</string>
+    <string name="settings_autostart_body">This phone decides which apps can start by themselves. Allow Pasala so it’s ready after a restart or an update.</string>
 </resources>

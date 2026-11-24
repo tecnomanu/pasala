@@ -15,6 +15,8 @@ import androidx.core.content.ContextCompat
 import com.tecnomanu.pasala.core.Live
 import com.tecnomanu.pasala.core.Outgoing
 import com.tecnomanu.pasala.core.Sender
+import com.tecnomanu.pasala.net.Addresses
+import com.tecnomanu.pasala.data.Store
 import com.tecnomanu.pasala.net.Discovery
 import com.tecnomanu.pasala.net.PasalaServer
 import kotlinx.coroutines.Job
@@ -44,6 +46,7 @@ class PasalaService : Service() {
         try {
             val port = server.start()
             discovery.register(port)
+            announced = "${Store.identity.name}|$port|${Addresses.local().all}"
         } catch (e: Exception) {
             Log.e(TAG, "could not start listening", e)
         }
@@ -72,20 +75,42 @@ class PasalaService : Service() {
     private fun watchNetwork() {
         val cm = getSystemService(ConnectivityManager::class.java)
         val cb = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) = scheduleReannounce()
-            override fun onLost(network: Network) = scheduleReannounce()
+            // A network coming or going can drop the announcement even with the same address: always redo it.
+            override fun onAvailable(network: Network) = scheduleReannounce(force = true)
+            override fun onLost(network: Network) = scheduleReannounce(force = true)
             override fun onLinkPropertiesChanged(network: Network, lp: LinkProperties) = scheduleReannounce()
         }
         runCatching { cm.registerDefaultNetworkCallback(cb) }.onSuccess { netCallback = cb }
     }
 
-    /** Addresses changed: announce again so peers on the LAN see the new one. */
-    private fun scheduleReannounce() {
+    /**
+     * Announce again only when what we announce changed (addresses, name, port): link-property callbacks
+     * fire often (VPN, IPv6, DNS) and each re-register means mDNS traffic. See HISTORY.md#idle-wakeups
+     */
+    private fun scheduleReannounce(force: Boolean = false) {
         reannounce?.cancel()
         reannounce = Live.appScope.launch {
             delay(1500)
             val p = Live.port.value
-            if (p > 0) discovery.register(p)
+            if (p <= 0) return@launch
+            val key = "${Store.identity.name}|$p|${Addresses.local().all}"
+            if (!force && key == announced) return@launch
+            announced = key
+            discovery.register(p)
+        }
+    }
+
+    @Volatile private var announced: String? = null
+
+    // Swiping Pasala away from recents must not stop receiving. See HISTORY.md#survive-swipe
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        Log.i(TAG, "task removed; still listening on ${Live.port.value}")
+        runCatching {
+            ServiceCompat.startForeground(
+                this, Notifications.ID_SERVICE, Notifications.ready(this),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE,
+            )
         }
     }
 
@@ -109,7 +134,7 @@ class PasalaService : Service() {
         @Volatile private var wantBrowsing = false
 
         /** Name changed: announce again on the LAN. */
-        fun reannounce() { instance?.scheduleReannounce() }
+        fun reannounce() { instance?.scheduleReannounce(force = true) }
 
         /** LAN browsing only while the app is on screen (saves battery). */
         fun setBrowsing(on: Boolean) {

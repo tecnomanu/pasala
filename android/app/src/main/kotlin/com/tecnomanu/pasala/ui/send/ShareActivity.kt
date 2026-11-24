@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -43,12 +44,44 @@ import kotlinx.coroutines.withContext
 class ShareActivity : ComponentActivity() {
     private var files by mutableStateOf<List<Outgoing>?>(null)
 
+    /** Files chosen in the picker (shortcut / widget), kept across recreation. */
+    private var picked: List<Uri> = emptyList()
+
+    private val pickFiles = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isEmpty()) { finish(); return@registerForActivityResult }
+        picked = uris
+        describePicked()
+    }
+
+    private fun describePicked() {
+        val uris = picked
+        lifecycleScope.launch {
+            files = withContext(Dispatchers.IO) { uris.mapNotNull { Sender.describe(this@ShareActivity, it) } }
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putParcelableArrayList(STATE_PICKED, ArrayList(picked))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         PasalaService.start(this)
         PasalaService.setBrowsing(true)
-        load(intent)
+        if (intent.action == ACTION_PICK_FILES) {
+            // Launcher shortcut / widget: pick first, then the same send sheet as a share.
+            if (savedInstanceState == null) {
+                pickFiles.launch(arrayOf("*/*"))
+            } else {
+                @Suppress("DEPRECATION")
+                picked = savedInstanceState.getParcelableArrayList<Uri>(STATE_PICKED).orEmpty()
+                if (picked.isNotEmpty()) describePicked()
+            }
+        } else {
+            load(intent)
+        }
         lifecycleScope.launch { Resolver.refreshAll() }
 
         setContent {
@@ -86,7 +119,7 @@ class ShareActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         files = null
-        load(intent)
+        if (intent.action == ACTION_PICK_FILES) pickFiles.launch(arrayOf("*/*")) else load(intent)
     }
 
     private fun load(intent: Intent) {
@@ -127,5 +160,9 @@ class ShareActivity : ComponentActivity() {
         if (list.isEmpty()) intent.clipData?.let { clip -> (0 until clip.itemCount).mapNotNullTo(list) { clip.getItemAt(it).uri } }
         return list.distinct()
     }
-}
 
+    companion object {
+        const val ACTION_PICK_FILES = "com.tecnomanu.pasala.action.PICK_FILES"
+        private const val STATE_PICKED = "picked"
+    }
+}

@@ -21,6 +21,14 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
+    <!-- Vendor screen where the person allows Pasala to start on its own (Honor). -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="systemmanager" />
+        </intent>
+    </queries>
+
     <application
         android:name=".PasalaApp"
         android:allowBackup="false"
@@ -49,6 +57,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="pasala" android:host="pair" />
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
 
         <activity
@@ -101,7 +110,8 @@
         <service
             android:name=".service.PasalaService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="connectedDevice"
+            android:stopWithTask="false" />
 
         <receiver
             android:name=".service.BootReceiver"
@@ -109,6 +119,8 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <!-- Some vendors send this instead of BOOT_COMPLETED after a quick restart. -->
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
 
@@ -119,5 +131,15 @@
         <receiver
             android:name=".service.CopyTextReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".service.QuickSendWidget"
+            android:exported="true"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_quick_info" />
+        </receiver>
     </application>
 </manifest>

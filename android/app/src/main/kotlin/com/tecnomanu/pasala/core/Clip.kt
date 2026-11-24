@@ -32,6 +32,12 @@ object Clip {
         }
     }
 
+    /** True when the clipboard holds text; looks only at its description, never at the content. */
+    fun hasText(context: Context): Boolean {
+        val cm = context.getSystemService(ClipboardManager::class.java)
+        return runCatching { cm.hasPrimaryClip() && cm.primaryClipDescription?.hasMimeType("text/*") == true }.getOrDefault(false)
+    }
+
     /** Only works while one of our windows has focus (Android 10+). */
     fun read(context: Context): String? {
         val cm = context.getSystemService(ClipboardManager::class.java)

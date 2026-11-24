@@ -131,6 +131,7 @@ fun HomeScreen(
         exempt = Background.isExempt(context)
         onPauseOrDispose { }
     }
+    val clipHasText = rememberClipHasText()
     var pickFor by remember { mutableStateOf<Peer?>(null) }
     var sheetFor by remember { mutableStateOf<Peer?>(null) }
     var renaming by remember { mutableStateOf<Peer?>(null) }
@@ -180,11 +181,12 @@ fun HomeScreen(
                 }
             }
 
-            if (state.peers.isNotEmpty()) {
+            if (state.peers.isNotEmpty() && clipHasText) {
                 item(key = "send-clip") {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
+                            .animateItem()
                             .padding(top = 2.dp)
                             .clip(RoundedCornerShape(50))
                             .background(c.surface)

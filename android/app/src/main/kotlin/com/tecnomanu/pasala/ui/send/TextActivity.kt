@@ -60,7 +60,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Small sheet that sends a text to one device. Opened from the text-selection menu, the share sheet
- * (plain text), the quick-settings tile or Home ("Send what you copied").
+ * (plain text) and, reading the clipboard, from Home, the quick-settings tile, the "ready" notification,
+ * the launcher shortcut and the widget.
  */
 class TextActivity : ComponentActivity() {
     private var text by mutableStateOf<String?>(null)
@@ -87,7 +88,8 @@ class TextActivity : ComponentActivity() {
     private fun load(intent: Intent) {
         text = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
             ?: intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
-        waitingForClipboard = text == null && intent.getBooleanExtra(EXTRA_FROM_CLIPBOARD, false)
+        waitingForClipboard = text == null &&
+            (intent.action == ACTION_SEND_CLIPBOARD || intent.getBooleanExtra(EXTRA_FROM_CLIPBOARD, false))
         if (text == null && !waitingForClipboard) text = "" // nothing to send: show the empty state
         opened++
     }
@@ -198,9 +200,11 @@ class TextActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_FROM_CLIPBOARD = "from_clipboard"
+        /** Used by the launcher shortcut, the widget and the notification action. */
+        const val ACTION_SEND_CLIPBOARD = "com.tecnomanu.pasala.action.SEND_CLIPBOARD"
 
         fun fromClipboard(context: Context): Intent =
-            Intent(context, TextActivity::class.java).putExtra(EXTRA_FROM_CLIPBOARD, true)
+            Intent(context, TextActivity::class.java).setAction(ACTION_SEND_CLIPBOARD).putExtra(EXTRA_FROM_CLIPBOARD, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
     }
 }
