@@ -86,8 +86,8 @@ import com.tecnomanu.pasala.ui.send.QuoteBlock
 import com.tecnomanu.pasala.ui.send.TextActivity
 import com.tecnomanu.pasala.core.Format
 import com.tecnomanu.pasala.core.Live
+import com.tecnomanu.pasala.core.AndroidPlatform
 import com.tecnomanu.pasala.core.Outgoing
-import com.tecnomanu.pasala.core.Sender
 import com.tecnomanu.pasala.data.HistoryItem
 import com.tecnomanu.pasala.data.Peer
 import com.tecnomanu.pasala.data.Store
@@ -141,7 +141,7 @@ fun HomeScreen(
         val peer = pickFor ?: return
         if (uris.isEmpty()) return
         scope.launch {
-            val files = withContext(Dispatchers.IO) { uris.mapNotNull { Sender.describe(context, it) } }
+            val files = withContext(Dispatchers.IO) { uris.mapNotNull { AndroidPlatform.describe(context, it) } }
             if (files.isNotEmpty()) onSend(peer.id, files)
         }
     }
@@ -507,7 +507,7 @@ private fun TextHistoryRow(h: HistoryItem, modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     // Up to 1 MB on disk: read it off the main thread, then act.
     fun withFull(block: (String) -> Unit) = scope.launch {
-        val t = withContext(Dispatchers.IO) { TextStore.load(context, h.id) } ?: h.text.orEmpty()
+        val t = withContext(Dispatchers.IO) { TextStore.load(h.id) } ?: h.text.orEmpty()
         block(t)
     }
     Box(modifier) {

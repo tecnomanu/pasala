@@ -9,6 +9,8 @@ object Addresses {
         val all: List<String> get() = lan + tailscale
     }
 
+    private val VIRTUAL = listOf("docker", "br-", "veth", "virbr", "vmnet", "vboxnet", "lxc", "lxd", "podman", "cni", "flannel")
+
     fun isTailscale(ip: String): Boolean {
         val p = ip.split('.').mapNotNull { it.toIntOrNull() }
         return p.size == 4 && p[0] == 100 && p[1] in 64..127
@@ -28,6 +30,8 @@ object Addresses {
             for (ni in ifaces) {
                 if (!runCatching { ni.isUp && !ni.isLoopback }.getOrDefault(false)) continue
                 val name = ni.name.orEmpty()
+                // Container and VM bridges (Linux desktops) are private but never reach another device.
+                if (VIRTUAL.any { name.startsWith(it) }) continue
                 for (addr in ni.inetAddresses.toList()) {
                     if (addr !is Inet4Address || addr.isLoopbackAddress || addr.isLinkLocalAddress) continue
                     val ip = addr.hostAddress ?: continue
@@ -36,8 +40,8 @@ object Addresses {
                         isPrivateLan(ip) -> {
                             // Wi-Fi / Ethernet first, then anything else private (hotspot, USB tether).
                             val rank = when {
-                                name.startsWith("wlan") -> 0
-                                name.startsWith("eth") -> 1
+                                name.startsWith("wl") -> 0 // wlan0, wlp2s0
+                                name.startsWith("eth") || name.startsWith("en") -> 1 // eth0, enp3s0
                                 else -> 2
                             }
                             lan += rank to ip

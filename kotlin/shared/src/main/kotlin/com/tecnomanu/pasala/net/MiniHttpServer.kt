@@ -1,6 +1,6 @@
 package com.tecnomanu.pasala.net
 
-import android.util.Log
+import com.tecnomanu.pasala.core.Log
 import java.io.BufferedInputStream
 import java.io.EOFException
 import java.io.IOException

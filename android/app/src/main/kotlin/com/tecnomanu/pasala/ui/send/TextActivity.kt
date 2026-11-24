@@ -166,7 +166,7 @@ class TextActivity : ComponentActivity() {
                                 sending = true
                                 Store.setLastTextPeer(id)
                                 scope.launch {
-                                    result = Sender.sendText(applicationContext, id, t)
+                                    result = Sender.sendText(id, t)
                                     sending = false
                                 }
                             }

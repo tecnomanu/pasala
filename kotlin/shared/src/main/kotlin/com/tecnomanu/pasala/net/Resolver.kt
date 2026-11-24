@@ -1,6 +1,6 @@
 package com.tecnomanu.pasala.net
 
-import android.util.Log
+import com.tecnomanu.pasala.core.Log
 import com.tecnomanu.pasala.core.Live
 import com.tecnomanu.pasala.data.HelloRequest
 import com.tecnomanu.pasala.data.HelloResponse

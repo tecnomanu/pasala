@@ -1,9 +1,5 @@
 package com.tecnomanu.pasala.core
 
-import android.net.Uri
-import android.util.Base64
-import android.util.Log
-import com.tecnomanu.pasala.BuildConfig
 import com.tecnomanu.pasala.data.PairRequest
 import com.tecnomanu.pasala.data.PairResponse
 import com.tecnomanu.pasala.data.PasalaJson
@@ -20,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.util.Base64
 
 object Pairing {
     private const val TAG = "Pasala"
@@ -31,7 +28,7 @@ object Pairing {
         return b64url(b)
     }
 
-    fun b64url(b: ByteArray): String = Base64.encodeToString(b, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+    fun b64url(b: ByteArray): String = Base64.getUrlEncoder().withoutPadding().encodeToString(b)
 
     data class Code(val code: String, val expiresAt: Long, val payload: String)
 
@@ -46,14 +43,14 @@ object Pairing {
         val payload = QrPayload(
             id = Store.identity.id,
             name = Store.identity.name,
-            platform = "android",
+            platform = Platform.name,
             port = Live.advertisedPort,
             addrs = Addresses.local().all,
             code = code,
         )
         val json = PasalaJson.encodeToString(QrPayload.serializer(), payload)
         val text = "pasala://pair?d=" + b64url(json.toByteArray(Charsets.UTF_8))
-        if (BuildConfig.DEBUG) Log.i(TAG, "QR $text")
+        if (Platform.debug) Log.i(TAG, "QR $text")
         return Code(code, System.currentTimeMillis() + CODE_TTL_MS, text).also { _current.value = it }
     }
 
@@ -73,10 +70,10 @@ object Pairing {
 
     /** Parses `pasala://pair?d=...`. Returns null if it isn't a Pasala code. */
     fun parse(text: String): QrPayload? = runCatching {
-        val uri = Uri.parse(text.trim())
+        val uri = java.net.URI(text.trim())
         if (uri.scheme != "pasala" || uri.host != "pair") return null
-        val d = uri.getQueryParameter("d") ?: return null
-        val json = String(Base64.decode(d, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP), Charsets.UTF_8)
+        val d = uri.rawQuery?.split('&')?.firstOrNull { it.startsWith("d=") }?.removePrefix("d=") ?: return null
+        val json = String(Base64.getUrlDecoder().decode(d.trimEnd('=')), Charsets.UTF_8)
         PasalaJson.decodeFromString(QrPayload.serializer(), json).takeIf { it.v == 1 && it.id.isNotBlank() && it.code.isNotBlank() }
     }.getOrNull()
 
@@ -92,7 +89,7 @@ object Pairing {
         if (qr.id == Store.identity.id) return@withContext Result.Self
         val me = Store.identity
         val req = PairRequest(
-            code = qr.code, id = me.id, name = me.name, platform = "android",
+            code = qr.code, id = me.id, name = me.name, platform = Platform.name,
             port = Live.advertisedPort, addrs = Addresses.local().all,
         )
         var expired = false
@@ -133,6 +130,6 @@ object Pairing {
         Live.setOnline(req.id, true)
         Live.emitPaired(req.id)
         val me = Store.identity
-        return PairResponse(me.id, me.name, "android", Live.advertisedPort, Addresses.local().all, secret)
+        return PairResponse(me.id, me.name, Platform.name, Live.advertisedPort, Addresses.local().all, secret)
     }
 }
